@@ -1,19 +1,45 @@
-
 /**
- * Optimizes an image URL using Cloudinary's transformation API.
- * In a real app, you would upload to Cloudinary and get a public ID.
- * For this prototype, we'll wrap external URLs or simulate the structure.
+ * Cloudinary integration for KAZI retail platform.
+ * Uses unsigned uploads with an upload preset for browser-side image handling.
  */
-export const optimizeImage = (url: string, width = 800) => {
-  if (url.includes('cloudinary.com')) {
-    // Inject optimization parameters: auto format, auto quality, specific width
-    return url.replace('/upload/', `/upload/f_auto,q_auto,w_${width}/`);
-  }
-  // If it's a generic placeholder, return as is (but in production use real Cloudinary IDs)
-  return url;
-};
 
 export const CLOUDINARY_CONFIG = {
-  cloudName: 'kazi-retail',
-  uploadPreset: 'ml_default'
+  cloudName: 'dlng6dqtl',
+  uploadPreset: 'eccomerce',
+};
+
+/**
+ * Uploads an image file directly to Cloudinary from the browser.
+ * Returns the secure URL of the uploaded image.
+ */
+export const uploadToCloudinary = async (file: File): Promise<string> => {
+  const { cloudName, uploadPreset } = CLOUDINARY_CONFIG;
+
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('upload_preset', uploadPreset);
+  formData.append('folder', 'eccomerce');
+
+  const response = await fetch(
+    `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
+    { method: 'POST', body: formData }
+  );
+
+  if (!response.ok) {
+    const err = await response.json();
+    throw new Error(err.error?.message || 'Cloudinary upload failed');
+  }
+
+  const data = await response.json();
+  return data.secure_url as string;
+};
+
+/**
+ * Optimizes a Cloudinary image URL with transformation parameters.
+ */
+export const optimizeImage = (url: string, width = 800): string => {
+  if (url && url.includes('cloudinary.com')) {
+    return url.replace('/upload/', `/upload/f_auto,q_auto,w_${width}/`);
+  }
+  return url;
 };
