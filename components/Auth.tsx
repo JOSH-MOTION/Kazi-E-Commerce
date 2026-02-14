@@ -32,7 +32,6 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
       if (isLogin) {
         await signInWithEmailAndPassword(auth, formData.email, formData.password);
       } else {
-        // Validation for registration
         if (!formData.fullName || !formData.phone || !formData.city) {
           throw new Error("Please fill in all profile information.");
         }
@@ -40,10 +39,8 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
         const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
         const user = userCredential.user;
 
-        // Update Auth Profile for immediate UI feedback
         await updateProfile(user, { displayName: formData.fullName });
 
-        // Persist extended user data to Firestore
         await setDoc(doc(db, 'users', user.uid), {
           uid: user.uid,
           fullName: formData.fullName,
@@ -151,26 +148,26 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
               {!isLogin && (
                 <div className="space-y-6 animate-in fade-in duration-500">
                   <div className="relative group">
-                    <User className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-300 group-focus-within:text-stone-900 transition-colors" size={20} />
+                    <User className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400 group-focus-within:text-stone-900 transition-colors" size={20} />
                     <input 
                       required 
                       type="text" 
                       value={formData.fullName} 
                       onChange={e => updateField('fullName', e.target.value)}
-                      className="w-full pl-12 pr-4 py-4 rounded-2xl border border-stone-100 bg-stone-50/50 focus:bg-white focus:ring-4 focus:ring-stone-900/5 focus:border-stone-900 outline-none transition-all text-sm font-semibold"
+                      className="w-full pl-12 pr-4 py-4 rounded-2xl border border-stone-200 bg-stone-50/50 focus:bg-white focus:ring-4 focus:ring-stone-900/5 focus:border-stone-900 outline-none transition-all text-sm font-bold text-black"
                       placeholder="Full Name"
                     />
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="relative group">
-                      <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-300 group-focus-within:text-stone-900 transition-colors" size={20} />
+                      <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400 group-focus-within:text-stone-900 transition-colors" size={20} />
                       <input 
                         required 
                         type="tel" 
                         value={formData.phone} 
                         onChange={e => updateField('phone', e.target.value)}
-                        className="w-full pl-12 pr-4 py-4 rounded-2xl border border-stone-100 bg-stone-50/50 focus:bg-white focus:ring-4 focus:ring-stone-900/5 focus:border-stone-900 outline-none transition-all text-sm font-semibold"
+                        className="w-full pl-12 pr-4 py-4 rounded-2xl border border-stone-200 bg-stone-50/50 focus:bg-white focus:ring-4 focus:ring-stone-900/5 focus:border-stone-900 outline-none transition-all text-sm font-bold text-black"
                         placeholder="MoMo Phone"
                       />
                     </div>
@@ -184,25 +181,25 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
               )}
 
               <div className="relative group">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-300 group-focus-within:text-stone-900 transition-colors" size={20} />
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400 group-focus-within:text-stone-900 transition-colors" size={20} />
                 <input 
                   required 
                   type="email" 
                   value={formData.email} 
                   onChange={e => updateField('email', e.target.value)}
-                  className="w-full pl-12 pr-4 py-4 rounded-2xl border border-stone-100 bg-stone-50/50 focus:bg-white focus:ring-4 focus:ring-stone-900/5 focus:border-stone-900 outline-none transition-all text-sm font-semibold"
+                  className="w-full pl-12 pr-4 py-4 rounded-2xl border border-stone-200 bg-stone-50/50 focus:bg-white focus:ring-4 focus:ring-stone-900/5 focus:border-stone-900 outline-none transition-all text-sm font-bold text-black"
                   placeholder="Email Address"
                 />
               </div>
 
               <div className="relative group">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-300 group-focus-within:text-stone-900 transition-colors" size={20} />
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400 group-focus-within:text-stone-900 transition-colors" size={20} />
                 <input 
                   required 
                   type="password" 
                   value={formData.password} 
                   onChange={e => updateField('password', e.target.value)}
-                  className="w-full pl-12 pr-4 py-4 rounded-2xl border border-stone-100 bg-stone-50/50 focus:bg-white focus:ring-4 focus:ring-stone-900/5 focus:border-stone-900 outline-none transition-all text-sm font-semibold"
+                  className="w-full pl-12 pr-4 py-4 rounded-2xl border border-stone-200 bg-stone-50/50 focus:bg-white focus:ring-4 focus:ring-stone-900/5 focus:border-stone-900 outline-none transition-all text-sm font-bold text-black"
                   placeholder="Create Password"
                 />
               </div>
