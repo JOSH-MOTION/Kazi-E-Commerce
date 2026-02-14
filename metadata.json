@@ -1,0 +1,8 @@
+{
+  "name": "Kazi E-Commerce Blueprint",
+  "description": "A high-performance, mobile-first e-commerce platform optimized for African markets, featuring MoMo manual verification and a scalable variant system.",
+  "requestFramePermissions": [
+    "camera",
+    "geolocation"
+  ]
+}
