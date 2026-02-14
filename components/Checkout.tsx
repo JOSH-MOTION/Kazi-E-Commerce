@@ -1,5 +1,5 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
-// Added missing 'X' icon to the lucide-react imports
 import { ChevronLeft, Info, Loader2, CheckCircle2, ShieldCheck, User, Phone, Copy, Ticket, X } from 'lucide-react';
 import { CartItem, Order, OrderStatus } from '../types';
 import { PRODUCTS, MOMO_CONFIG, PROMOTIONS } from '../constants';
@@ -82,7 +82,7 @@ const Checkout: React.FC<CheckoutProps> = ({ cart, total: subtotal, userProfile,
       <div className="w-24 h-24 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-8 border-4 border-white shadow-xl">
         <CheckCircle2 className="text-green-500" size={48} />
       </div>
-      <h2 className="text-5xl font-serif font-bold text-stone-900 mb-4">Success</h2>
+      <h2 className="text-5xl font-serif font-bold text-stone-900 mb-4">Medaase! (Thank You)</h2>
       <p className="text-stone-500 mb-12 text-lg">We've received your order. Our team will verify the payment and contact you shortly for delivery.</p>
       <button onClick={onComplete} className="w-full bg-stone-900 text-white py-6 rounded-2xl font-bold shadow-2xl shadow-stone-900/20 hover:scale-[1.02] transition-all">
         Back to the Collection
@@ -116,7 +116,7 @@ const Checkout: React.FC<CheckoutProps> = ({ cart, total: subtotal, userProfile,
               <h2 className="text-4xl font-serif font-bold text-stone-900">Where should we deliver?</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <Input icon={<User size={18}/>} label="Receiver Name" value={form.name} onChange={(v:any) => setForm({...form, name: v})} placeholder="Kofi Mensah" />
-                <Input icon={<Phone size={18}/>} label="Phone Number" type="tel" value={form.phone} onChange={(v:any) => setForm({...form, phone: v})} placeholder="07XX XXX XXX" />
+                <Input icon={<Phone size={18}/>} label="Phone Number" type="tel" value={form.phone} onChange={(v:any) => setForm({...form, phone: v})} placeholder="0XX XXX XXXX" />
               </div>
               <div className="space-y-3">
                 <label className="text-[10px] font-bold uppercase text-stone-400 tracking-widest block">City / Neighborhood</label>
@@ -126,7 +126,7 @@ const Checkout: React.FC<CheckoutProps> = ({ cart, total: subtotal, userProfile,
                 <label className="text-[10px] font-bold uppercase text-stone-400 tracking-widest block">Street & Landmarks</label>
                 <textarea 
                   className="w-full p-6 border-2 border-stone-50 rounded-3xl outline-none focus:border-stone-900 focus:bg-white transition-all min-h-[140px] text-sm font-bold text-stone-900 bg-stone-50/50" 
-                  placeholder="e.g. Plot 45, Mawanda Road, opposite Total Station" 
+                  placeholder="e.g. Near Sapieman Junction, House No. 12" 
                   value={form.detailedAddress} 
                   onChange={e => setForm({...form, detailedAddress: e.target.value})}
                 />
@@ -145,11 +145,11 @@ const Checkout: React.FC<CheckoutProps> = ({ cart, total: subtotal, userProfile,
               
               <div className="bg-stone-900 rounded-[2.5rem] p-10 text-white relative overflow-hidden">
                 <div className="relative z-10">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-stone-500 mb-6">Payment Method: MTN/Airtel MoMo</p>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-stone-500 mb-6">Payment Method: MTN / Telecel / AT Money</p>
                   <div className="flex flex-col md:flex-row items-center justify-between gap-8">
                     <div>
                       <p className="text-stone-400 text-xs mb-2 uppercase tracking-widest font-bold">Transfer Amount</p>
-                      <h3 className="text-4xl font-serif font-bold text-orange-400">UGX {finalTotal.toLocaleString()}</h3>
+                      <h3 className="text-4xl font-serif font-bold text-orange-400">GH₵ {finalTotal.toLocaleString()}</h3>
                     </div>
                     <div className="flex flex-col items-center md:items-end">
                       <p className="text-stone-400 text-xs mb-2 uppercase tracking-widest font-bold">Merchant Number</p>
@@ -184,7 +184,7 @@ const Checkout: React.FC<CheckoutProps> = ({ cart, total: subtotal, userProfile,
                   onClick={handleFinish} 
                   className="flex-grow bg-stone-900 text-white py-6 rounded-3xl font-bold flex items-center justify-center gap-4 hover:bg-stone-800 transition-all shadow-2xl shadow-stone-900/10"
                 >
-                  {loading ? <Loader2 className="animate-spin" size={24} /> : 'Confirm Order Installation'}
+                  {loading ? <Loader2 className="animate-spin" size={24} /> : 'Confirm Order & Pay'}
                 </button>
               </div>
             </div>
@@ -211,7 +211,7 @@ const Checkout: React.FC<CheckoutProps> = ({ cart, total: subtotal, userProfile,
                         <p className="text-[10px] text-stone-400 uppercase tracking-widest">Qty: {item.quantity} • {variant?.size || 'OS'}</p>
                       </div>
                     </div>
-                    <span className="font-bold text-stone-900 text-sm">UGX {((variant?.price || 0) * item.quantity).toLocaleString()}</span>
+                    <span className="font-bold text-stone-900 text-sm">GH₵ {((variant?.price || 0) * item.quantity).toLocaleString()}</span>
                   </div>
                 );
               })}
@@ -240,7 +240,6 @@ const Checkout: React.FC<CheckoutProps> = ({ cart, total: subtotal, userProfile,
               {activePromo && (
                 <div className="flex items-center justify-between bg-orange-50 p-4 rounded-xl border border-orange-100">
                   <span className="text-[10px] font-bold text-orange-700 uppercase tracking-widest">PROMO: {activePromo.code}</span>
-                  {/* FIX: Ensure X icon is imported and correctly used here */}
                   <button onClick={() => { setActivePromo(null); setPromoCode(''); }} className="text-orange-300 hover:text-orange-700 transition-colors"><X size={14}/></button>
                 </div>
               )}
@@ -249,17 +248,17 @@ const Checkout: React.FC<CheckoutProps> = ({ cart, total: subtotal, userProfile,
             <div className="space-y-4 pt-4">
               <div className="flex justify-between text-sm text-stone-400 font-medium">
                 <span>Subtotal</span>
-                <span>UGX {subtotal.toLocaleString()}</span>
+                <span>GH₵ {subtotal.toLocaleString()}</span>
               </div>
               {discountAmount > 0 && (
                 <div className="flex justify-between text-sm text-orange-600 font-bold">
                   <span>Discount</span>
-                  <span>- UGX {discountAmount.toLocaleString()}</span>
+                  <span>- GH₵ {discountAmount.toLocaleString()}</span>
                 </div>
               )}
               <div className="flex justify-between items-center text-3xl font-serif font-bold text-stone-900 pt-6">
                 <span>Total</span>
-                <span className="text-stone-900 tracking-tight">UGX {finalTotal.toLocaleString()}</span>
+                <span className="text-stone-900 tracking-tight">GH₵ {finalTotal.toLocaleString()}</span>
               </div>
             </div>
           </div>
