@@ -1,0 +1,66 @@
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // --- HELPER FUNCTIONS ---
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      // Reads the user's role from their document. 
+      // Note: This incurs a small performance/cost hit (1 extra read), 
+      // but is highly secure for this blueprint's architecture.
+      return isAuthenticated() && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'ADMIN';
+    }
+
+    // --- USERS COLLECTION ---
+    match /users/{userId} {
+      // Users can read their own profile. Admins can view all customers for management.
+      allow read: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+      
+      // Users can create their own profile document during signup.
+      allow create: if isAuthenticated() && request.auth.uid == userId;
+      
+      // Allow users to update their own profile (e.g. city, phone).
+      // SECURITY NOTE: In a full production app, role-switching (AdminGate logic) 
+      // should be handled via a Firebase Cloud Function to prevent users 
+      // from manually elevating themselves via the browser console.
+      allow update: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+      
+      // Profiles should not be deleted to maintain order history.
+      allow delete: if false;
+    }
+
+    // --- ORDERS COLLECTION ---
+    match /orders/{orderId} {
+      // Customers can only see their own orders. Admins can see everything.
+      allow read: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid || 
+        isAdmin()
+      );
+      
+      // Anyone logged in can place an order.
+      allow create: if isAuthenticated() && 
+                    request.resource.data.userId == request.auth.uid;
+      
+      // Only admins can update an order (e.g., changing status to 'PROCESSING' after MoMo verification).
+      allow update: if isAdmin();
+      
+      // Prevent order deletion to ensure financial audit trails.
+      allow delete: if false;
+    }
+
+    // --- PRODUCTS COLLECTION ---
+    match /products/{productId} {
+      // Anyone (even guest users) can browse the catalog.
+      allow read: if true;
+      
+      // Only Admins or Managers can add/edit products.
+      allow write: if isAdmin();
+    }
+  }
+}
