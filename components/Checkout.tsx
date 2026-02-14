@@ -1,8 +1,8 @@
-
-import React, { useState, useEffect } from 'react';
-import { ChevronLeft, Info, Loader2, CheckCircle2, ShieldCheck, User, Phone } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+// Added missing 'X' icon to the lucide-react imports
+import { ChevronLeft, Info, Loader2, CheckCircle2, ShieldCheck, User, Phone, Copy, Ticket, X } from 'lucide-react';
 import { CartItem, Order, OrderStatus } from '../types';
-import { PRODUCTS, MOMO_CONFIG } from '../constants';
+import { PRODUCTS, MOMO_CONFIG, PROMOTIONS } from '../constants';
 import { db } from '../firebase';
 import { collection, addDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import LocationSearch from './LocationSearch';
@@ -15,9 +15,13 @@ interface CheckoutProps {
   onCancel: () => void;
 }
 
-const Checkout: React.FC<CheckoutProps> = ({ cart, total, userProfile, onComplete, onCancel }) => {
+const Checkout: React.FC<CheckoutProps> = ({ cart, total: subtotal, userProfile, onComplete, onCancel }) => {
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [loading, setLoading] = useState(false);
+  const [promoCode, setPromoCode] = useState('');
+  const [activePromo, setActivePromo] = useState<any>(null);
+  const [copied, setCopied] = useState(false);
+
   const [form, setForm] = useState({
     name: userProfile?.fullName || '',
     phone: userProfile?.phone || '',
@@ -26,23 +30,37 @@ const Checkout: React.FC<CheckoutProps> = ({ cart, total, userProfile, onComplet
     momoId: '',
   });
 
-  useEffect(() => {
-    if (userProfile) {
-      setForm(prev => ({
-        ...prev,
-        name: prev.name || userProfile.fullName || '',
-        phone: prev.phone || userProfile.phone || '',
-        city: prev.city || userProfile.city || '',
-      }));
+  const discountAmount = useMemo(() => {
+    if (!activePromo) return 0;
+    if (activePromo.type === 'PERCENT') return subtotal * (activePromo.value / 100);
+    return activePromo.value;
+  }, [activePromo, subtotal]);
+
+  const finalTotal = Math.max(0, subtotal - discountAmount);
+
+  const applyPromo = () => {
+    const promo = PROMOTIONS.find(p => p.code.toUpperCase() === promoCode.toUpperCase());
+    if (promo) {
+      setActivePromo(promo);
+    } else {
+      alert("Invalid promotion code.");
     }
-  }, [userProfile]);
+  };
+
+  const copyToClipboard = () => {
+    navigator.clipboard.writeText(MOMO_CONFIG.number);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   const handleFinish = async () => {
     setLoading(true);
     try {
       await addDoc(collection(db, 'orders'), {
         items: cart,
-        totalAmount: total,
+        subtotal: subtotal,
+        discount: discountAmount,
+        totalAmount: finalTotal,
         status: OrderStatus.PENDING_VERIFICATION,
         momoTransactionId: form.momoId.toUpperCase(),
         createdAt: new Date().toISOString(),
@@ -60,54 +78,55 @@ const Checkout: React.FC<CheckoutProps> = ({ cart, total, userProfile, onComplet
   };
 
   if (step === 3) return (
-    <div className="max-w-xl mx-auto py-24 px-4 text-center animate-in zoom-in duration-300">
+    <div className="max-w-xl mx-auto py-24 px-4 text-center animate-in zoom-in duration-500">
       <div className="w-24 h-24 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-8 border-4 border-white shadow-xl">
         <CheckCircle2 className="text-green-500" size={48} />
       </div>
-      <h2 className="text-4xl font-serif font-bold text-stone-900 mb-4">Order Received</h2>
-      <p className="text-stone-600 mb-10 text-lg">Thank you. We'll verify your payment and start processing your order.</p>
-      <button onClick={onComplete} className="w-full bg-stone-900 text-white py-5 rounded-2xl font-bold shadow-xl shadow-stone-900/10 hover:bg-stone-800 transition-all">
-        Return to Collection
+      <h2 className="text-5xl font-serif font-bold text-stone-900 mb-4">Success</h2>
+      <p className="text-stone-500 mb-12 text-lg">We've received your order. Our team will verify the payment and contact you shortly for delivery.</p>
+      <button onClick={onComplete} className="w-full bg-stone-900 text-white py-6 rounded-2xl font-bold shadow-2xl shadow-stone-900/20 hover:scale-[1.02] transition-all">
+        Back to the Collection
       </button>
     </div>
   );
 
   return (
-    <div className="max-w-5xl mx-auto p-4 md:p-8 lg:p-12">
-      <button onClick={onCancel} className="flex items-center gap-2 text-stone-500 hover:text-stone-900 mb-10 font-bold text-sm uppercase tracking-widest transition-colors">
-        <ChevronLeft size={20} /> Back to Bag
+    <div className="max-w-6xl mx-auto p-4 md:p-12 lg:p-16">
+      <button onClick={onCancel} className="group flex items-center gap-3 text-stone-400 hover:text-stone-900 mb-12 font-bold text-[10px] uppercase tracking-[0.3em] transition-all">
+        <ChevronLeft size={16} className="group-hover:-translate-x-1 transition-transform" /> Back to Bag
       </button>
       
-      <div className="grid lg:grid-cols-5 gap-16">
-        <div className="lg:col-span-3 space-y-10">
-          <div className="flex items-center gap-6">
-             <div className="flex items-center gap-3">
-               <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all ${step >= 1 ? 'bg-stone-900 text-white' : 'bg-stone-100 text-stone-400'}`}>1</div>
-               <span className={`text-xs font-bold uppercase tracking-widest ${step === 1 ? 'text-stone-900' : 'text-stone-400'}`}>Delivery</span>
+      <div className="grid lg:grid-cols-12 gap-16 lg:gap-24">
+        {/* Left Col: Forms */}
+        <div className="lg:col-span-7 space-y-12">
+          <div className="flex items-center gap-8">
+             <div className="flex items-center gap-4">
+               <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold transition-all ${step >= 1 ? 'bg-stone-900 text-white shadow-lg' : 'bg-stone-100 text-stone-400'}`}>1</div>
+               <span className={`text-[10px] font-bold uppercase tracking-widest ${step === 1 ? 'text-stone-900' : 'text-stone-400'}`}>Delivery</span>
              </div>
-             <div className="w-12 h-px bg-stone-200" />
-             <div className="flex items-center gap-3">
-               <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all ${step >= 2 ? 'bg-stone-900 text-white' : 'bg-stone-100 text-stone-400'}`}>2</div>
-               <span className={`text-xs font-bold uppercase tracking-widest ${step === 2 ? 'text-stone-900' : 'text-stone-400'}`}>Payment</span>
+             <div className="w-16 h-px bg-stone-100" />
+             <div className="flex items-center gap-4">
+               <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold transition-all ${step >= 2 ? 'bg-stone-900 text-white shadow-lg' : 'bg-stone-100 text-stone-400'}`}>2</div>
+               <span className={`text-[10px] font-bold uppercase tracking-widest ${step === 2 ? 'text-stone-900' : 'text-stone-400'}`}>Payment</span>
              </div>
           </div>
 
           {step === 1 ? (
-            <div className="space-y-6 animate-in slide-in-from-left duration-300">
-              <h2 className="text-3xl font-serif font-bold text-stone-900">Delivery Details</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Input icon={<User size={18}/>} label="Full Name" value={form.name} onChange={(v:any) => setForm({...form, name: v})} placeholder="Receiver Name" />
-                <Input icon={<Phone size={18}/>} label="Phone" type="tel" value={form.phone} onChange={(v:any) => setForm({...form, phone: v})} placeholder="07XX XXX XXX" />
+            <div className="space-y-8 animate-in slide-in-from-left duration-500">
+              <h2 className="text-4xl font-serif font-bold text-stone-900">Where should we deliver?</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Input icon={<User size={18}/>} label="Receiver Name" value={form.name} onChange={(v:any) => setForm({...form, name: v})} placeholder="Kofi Mensah" />
+                <Input icon={<Phone size={18}/>} label="Phone Number" type="tel" value={form.phone} onChange={(v:any) => setForm({...form, phone: v})} placeholder="07XX XXX XXX" />
               </div>
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <label className="text-[10px] font-bold uppercase text-stone-400 tracking-widest block">City / Neighborhood</label>
                 <LocationSearch value={form.city} onChange={(val) => setForm({...form, city: val})} />
               </div>
-              <div className="space-y-2">
-                <label className="text-[10px] font-bold uppercase text-stone-400 tracking-widest block">Detailed Address</label>
+              <div className="space-y-3">
+                <label className="text-[10px] font-bold uppercase text-stone-400 tracking-widest block">Street & Landmarks</label>
                 <textarea 
-                  className="w-full p-4 border border-stone-200 rounded-2xl outline-none focus:border-stone-900 focus:ring-4 focus:ring-stone-900/5 transition-all min-h-[100px] text-sm font-bold text-black bg-stone-50/30" 
-                  placeholder="Street name, house number, apartment..." 
+                  className="w-full p-6 border-2 border-stone-50 rounded-3xl outline-none focus:border-stone-900 focus:bg-white transition-all min-h-[140px] text-sm font-bold text-stone-900 bg-stone-50/50" 
+                  placeholder="e.g. Plot 45, Mawanda Road, opposite Total Station" 
                   value={form.detailedAddress} 
                   onChange={e => setForm({...form, detailedAddress: e.target.value})}
                 />
@@ -115,58 +134,133 @@ const Checkout: React.FC<CheckoutProps> = ({ cart, total, userProfile, onComplet
               <button 
                 disabled={!form.name || !form.phone || !form.city || !form.detailedAddress} 
                 onClick={() => setStep(2)} 
-                className="w-full bg-stone-900 text-white py-5 rounded-2xl font-bold hover:bg-stone-800 disabled:bg-stone-200 transition-all"
+                className="w-full bg-stone-900 text-white py-6 rounded-3xl font-bold hover:bg-stone-800 disabled:bg-stone-100 disabled:text-stone-300 transition-all shadow-2xl shadow-stone-900/10"
               >
-                Continue to Payment
+                Proceed to Secure Payment
               </button>
             </div>
           ) : (
-            <div className="space-y-8 animate-in slide-in-from-right duration-300">
-              <h2 className="text-3xl font-serif font-bold text-stone-900">Payment</h2>
-              <div className="bg-orange-50/50 p-8 rounded-3xl border border-orange-100 text-sm text-orange-700/80 leading-relaxed">
-                Send <span className="font-bold text-stone-900 underline underline-offset-2">UGX {total.toLocaleString()}</span> to <span className="font-bold text-stone-900 select-all">{MOMO_CONFIG.number}</span> ({MOMO_CONFIG.name}). Paste TxID below.
+            <div className="space-y-10 animate-in slide-in-from-right duration-500">
+              <h2 className="text-4xl font-serif font-bold text-stone-900">Secure Payment</h2>
+              
+              <div className="bg-stone-900 rounded-[2.5rem] p-10 text-white relative overflow-hidden">
+                <div className="relative z-10">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-stone-500 mb-6">Payment Method: MTN/Airtel MoMo</p>
+                  <div className="flex flex-col md:flex-row items-center justify-between gap-8">
+                    <div>
+                      <p className="text-stone-400 text-xs mb-2 uppercase tracking-widest font-bold">Transfer Amount</p>
+                      <h3 className="text-4xl font-serif font-bold text-orange-400">UGX {finalTotal.toLocaleString()}</h3>
+                    </div>
+                    <div className="flex flex-col items-center md:items-end">
+                      <p className="text-stone-400 text-xs mb-2 uppercase tracking-widest font-bold">Merchant Number</p>
+                      <div className="flex items-center gap-4 bg-white/10 px-6 py-4 rounded-2xl border border-white/10 group cursor-pointer active:scale-95 transition-all" onClick={copyToClipboard}>
+                        <span className="text-2xl font-mono font-bold tracking-wider">{MOMO_CONFIG.number}</span>
+                        <Copy size={18} className={copied ? "text-green-400" : "text-stone-500"} />
+                      </div>
+                      {copied && <span className="text-[9px] text-green-400 font-bold uppercase mt-2 animate-pulse">Copied to Clipboard</span>}
+                    </div>
+                  </div>
+                </div>
+                {/* Visual Accent */}
+                <div className="absolute -bottom-20 -right-20 w-64 h-64 bg-orange-600/10 rounded-full blur-[80px]" />
               </div>
-              <div className="space-y-2">
-                <label className="text-[10px] font-bold uppercase text-stone-400 tracking-widest block">MoMo Transaction ID</label>
+
+              <div className="space-y-4">
+                <label className="text-[10px] font-bold uppercase text-stone-400 tracking-widest block">MoMo Transaction ID / Reference</label>
                 <input 
                   autoFocus 
-                  className="w-full p-5 border-2 border-stone-200 rounded-2xl outline-none focus:border-orange-600 transition-all text-xl font-mono font-bold text-black bg-white" 
+                  className="w-full p-6 border-2 border-stone-100 rounded-3xl outline-none focus:border-stone-900 transition-all text-2xl font-mono font-bold text-stone-900 bg-white shadow-inner" 
                   placeholder="ID87236592" 
                   value={form.momoId} 
                   onChange={e => setForm({...form, momoId: e.target.value})}
                 />
+                <p className="text-[10px] text-stone-400 font-medium">Please enter the ID received in the SMS confirmation from your provider.</p>
               </div>
-              <div className="flex gap-4">
-                <button onClick={() => setStep(1)} className="px-8 py-5 border-2 border-stone-200 rounded-2xl font-bold text-stone-600 hover:bg-stone-50 transition-all">Edit Address</button>
+
+              <div className="flex flex-col md:flex-row gap-6">
+                <button onClick={() => setStep(1)} className="px-10 py-6 border-2 border-stone-100 rounded-3xl font-bold text-stone-600 hover:bg-stone-50 transition-all">Edit Delivery</button>
                 <button 
                   disabled={loading || !form.momoId} 
                   onClick={handleFinish} 
-                  className="flex-grow bg-stone-900 text-white py-5 rounded-2xl font-bold flex items-center justify-center gap-3 hover:bg-stone-800 transition-all"
+                  className="flex-grow bg-stone-900 text-white py-6 rounded-3xl font-bold flex items-center justify-center gap-4 hover:bg-stone-800 transition-all shadow-2xl shadow-stone-900/10"
                 >
-                  {loading ? <Loader2 className="animate-spin" size={20} /> : 'Confirm Payment'}
+                  {loading ? <Loader2 className="animate-spin" size={24} /> : 'Confirm Order Installation'}
                 </button>
               </div>
             </div>
           )}
         </div>
-        <div className="lg:col-span-2">
-          <div className="bg-stone-50 p-8 rounded-[2.5rem] border border-stone-200/60 sticky top-24">
-            <h3 className="text-xl font-serif font-bold text-stone-900 mb-8">Summary</h3>
-            <div className="space-y-4 mb-6">
+
+        {/* Right Col: Summary */}
+        <div className="lg:col-span-5">
+          <div className="bg-stone-50 p-10 rounded-[3rem] border border-stone-100/60 sticky top-28">
+            <h3 className="text-2xl font-serif font-bold text-stone-900 mb-10">Summary</h3>
+            
+            <div className="space-y-6 mb-10">
               {cart.map((item, idx) => {
                 const product = PRODUCTS.find(p => p.id === item.productId);
                 const variant = product?.variants.find(v => v.id === item.variantId);
                 return (
-                  <div key={idx} className="flex justify-between items-center text-sm">
-                    <span className="text-stone-600">{product?.name} x {item.quantity}</span>
-                    <span className="font-bold text-stone-900">UGX {((variant?.price || 0) * item.quantity).toLocaleString()}</span>
+                  <div key={idx} className="flex justify-between items-center group">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-16 bg-stone-200 rounded-xl overflow-hidden shrink-0">
+                        <img src={product?.images[0]} className="w-full h-full object-cover" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-stone-900 line-clamp-1">{product?.name}</p>
+                        <p className="text-[10px] text-stone-400 uppercase tracking-widest">Qty: {item.quantity} • {variant?.size || 'OS'}</p>
+                      </div>
+                    </div>
+                    <span className="font-bold text-stone-900 text-sm">UGX {((variant?.price || 0) * item.quantity).toLocaleString()}</span>
                   </div>
                 );
               })}
             </div>
-            <div className="space-y-3 pt-8 border-t border-stone-200 flex justify-between items-center text-xl font-serif font-bold text-stone-900">
-              <span>Total</span>
-              <span>UGX {total.toLocaleString()}</span>
+
+            {/* Promo Code Input */}
+            <div className="pt-8 border-t border-stone-200/60 space-y-4 mb-8">
+              <div className="flex gap-3">
+                <div className="relative flex-grow">
+                  <Ticket className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-300" size={18} />
+                  <input 
+                    type="text" 
+                    placeholder="Promo Code" 
+                    value={promoCode}
+                    onChange={e => setPromoCode(e.target.value)}
+                    className="w-full pl-12 pr-4 py-4 bg-white border border-stone-200 rounded-2xl outline-none focus:border-stone-900 transition-all text-xs font-bold uppercase tracking-widest"
+                  />
+                </div>
+                <button 
+                  onClick={applyPromo}
+                  className="bg-stone-900 text-white px-6 rounded-2xl font-bold text-[10px] uppercase tracking-widest hover:bg-stone-800 transition-all"
+                >
+                  Apply
+                </button>
+              </div>
+              {activePromo && (
+                <div className="flex items-center justify-between bg-orange-50 p-4 rounded-xl border border-orange-100">
+                  <span className="text-[10px] font-bold text-orange-700 uppercase tracking-widest">PROMO: {activePromo.code}</span>
+                  {/* FIX: Ensure X icon is imported and correctly used here */}
+                  <button onClick={() => { setActivePromo(null); setPromoCode(''); }} className="text-orange-300 hover:text-orange-700 transition-colors"><X size={14}/></button>
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-4 pt-4">
+              <div className="flex justify-between text-sm text-stone-400 font-medium">
+                <span>Subtotal</span>
+                <span>UGX {subtotal.toLocaleString()}</span>
+              </div>
+              {discountAmount > 0 && (
+                <div className="flex justify-between text-sm text-orange-600 font-bold">
+                  <span>Discount</span>
+                  <span>- UGX {discountAmount.toLocaleString()}</span>
+                </div>
+              )}
+              <div className="flex justify-between items-center text-3xl font-serif font-bold text-stone-900 pt-6">
+                <span>Total</span>
+                <span className="text-stone-900 tracking-tight">UGX {finalTotal.toLocaleString()}</span>
+              </div>
             </div>
           </div>
         </div>
@@ -176,16 +270,16 @@ const Checkout: React.FC<CheckoutProps> = ({ cart, total, userProfile, onComplet
 };
 
 const Input = ({ label, value, onChange, placeholder, type = 'text', icon }: any) => (
-  <div className="space-y-2 group">
-    <label className="text-[10px] font-bold uppercase text-stone-400 tracking-widest block">{label}</label>
+  <div className="space-y-3 group">
+    <label className="text-[10px] font-bold uppercase text-stone-400 tracking-widest block transition-colors group-focus-within:text-stone-900">{label}</label>
     <div className="relative">
-      {icon && <div className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400 group-focus-within:text-stone-900">{icon}</div>}
+      {icon && <div className="absolute left-6 top-1/2 -translate-y-1/2 text-stone-300 group-focus-within:text-stone-900 transition-colors">{icon}</div>}
       <input 
         type={type} 
         value={value} 
         onChange={e => onChange(e.target.value)}
         placeholder={placeholder}
-        className={`w-full ${icon ? 'pl-12' : 'px-4'} py-4 border border-stone-200 bg-stone-50/50 focus:bg-white rounded-2xl outline-none focus:border-stone-900 focus:ring-4 focus:ring-stone-900/5 transition-all text-sm font-bold text-black`}
+        className={`w-full ${icon ? 'pl-16' : 'px-6'} py-6 border-2 border-stone-50 bg-stone-50/50 focus:bg-white rounded-3xl outline-none focus:border-stone-900 transition-all text-sm font-bold text-stone-900 placeholder:text-stone-200 shadow-sm`}
       />
     </div>
   </div>
