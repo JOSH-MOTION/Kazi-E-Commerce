@@ -1,20 +1,23 @@
+
 import React, { useState } from 'react';
 import { ShoppingBag, Star, Clock, ShieldCheck, X, AlertTriangle } from 'lucide-react';
-import { PRODUCTS, CATEGORIES } from '../constants';
+import { CATEGORIES } from '../constants';
 import { Product, ProductVariant } from '../types';
 import { optimizeImage } from '../cloudinary';
+import { useAppContext } from '../context/AppContext';
 
 interface StorefrontProps {
   addToCart: (productId: string, variantId: string, quantity: number) => void;
 }
 
 const Storefront: React.FC<StorefrontProps> = ({ addToCart }) => {
+  const { products } = useAppContext();
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [activeCategory, setActiveCategory] = useState<string>('all');
 
   const filteredProducts = activeCategory === 'all' 
-    ? PRODUCTS 
-    : PRODUCTS.filter(p => p.categoryId === activeCategory);
+    ? products 
+    : products.filter(p => p.categoryId === activeCategory);
 
   return (
     <div className="max-w-7xl mx-auto pb-20">
