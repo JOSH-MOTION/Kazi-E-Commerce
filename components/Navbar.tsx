@@ -1,6 +1,7 @@
+
 'use client';
 import React, { useState, useEffect } from 'react';
-import { ShoppingCart, LogOut, ShieldCheck, User as UserIcon } from 'lucide-react';
+import { ShoppingCart, LogOut, ShieldCheck, User as UserIcon, Package } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 import AdminGate from './AdminGate';
 import { signOut } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
@@ -19,7 +20,7 @@ const Navbar: React.FC<NavbarProps> = ({ navigate }) => {
       navigate(path);
     } else {
       const target = path === 'store' ? '/' : `/${path}`;
-      window.location.href = target;
+      window.location.hash = target === '/' ? 'store' : target.replace('/', '');
     }
   };
 
@@ -46,7 +47,7 @@ const Navbar: React.FC<NavbarProps> = ({ navigate }) => {
 
           <div className="hidden md:flex space-x-8 text-sm font-medium text-stone-600">
             <button onClick={() => safeNavigate('store')} className="hover:text-stone-900 transition">Collection</button>
-            <button className="hover:text-stone-900 transition">Journal</button>
+            {user && <button onClick={() => safeNavigate('orders')} className="hover:text-stone-900 transition flex items-center gap-2"><Package size={14}/> My Orders</button>}
           </div>
 
           <div className="flex items-center gap-1 md:gap-3">
@@ -56,7 +57,7 @@ const Navbar: React.FC<NavbarProps> = ({ navigate }) => {
                   <p className="text-[10px] font-bold uppercase tracking-widest text-stone-400">
                     {profile?.role === 'ADMIN' ? 'Principal' : 'Member'}
                   </p>
-                  <p className="text-xs font-bold text-stone-900">{profile?.fullName || user.displayName || 'Account'}</p>
+                  <p className="text-xs font-bold text-stone-900 line-clamp-1 max-w-[120px]">{profile?.fullName || user.displayName || 'Account'}</p>
                 </div>
                 
                 {profile?.role === 'ADMIN' && (

@@ -6,14 +6,12 @@ import { useAppContext } from '../context/AppContext';
 import { PRODUCTS } from '../constants';
 
 interface CartDrawerProps {
-  // FIX: Make navigate optional to support Next.js server component layout usage
   navigate?: (path: string) => void;
 }
 
 const CartDrawer: React.FC<CartDrawerProps> = ({ navigate }) => {
   const { cart, cartTotal, totalItems, isCartOpen, setIsCartOpen, updateCartQuantity, removeFromCart } = useAppContext();
 
-  // FIX: Provide a safe navigation wrapper for Next.js app directory compatibility
   const safeNavigate = (path: string) => {
     if (navigate) {
       navigate(path);
@@ -63,7 +61,7 @@ const CartDrawer: React.FC<CartDrawerProps> = ({ navigate }) => {
                             <span className="w-8 text-center text-xs font-bold">{item.quantity}</span>
                             <button onClick={() => updateCartQuantity(item.variantId, 1)} className="w-8 h-8 flex items-center justify-center hover:bg-white rounded-md transition-all">+</button>
                           </div>
-                          <span className="font-bold text-stone-900 text-sm">UGX {(variant!.price * item.quantity).toLocaleString()}</span>
+                          <span className="font-bold text-stone-900 text-sm">GH₵ {(variant!.price * item.quantity).toLocaleString()}</span>
                         </div>
                       </div>
                     </div>
@@ -76,7 +74,7 @@ const CartDrawer: React.FC<CartDrawerProps> = ({ navigate }) => {
             <div className="p-8 bg-stone-50 border-t border-stone-100">
               <div className="flex justify-between mb-6">
                 <span className="text-stone-500 font-medium">Estimated Total</span>
-                <span className="text-2xl font-bold text-stone-900">UGX {cartTotal.toLocaleString()}</span>
+                <span className="text-2xl font-bold text-stone-900">GH₵ {cartTotal.toLocaleString()}</span>
               </div>
               <button onClick={() => { setIsCartOpen(false); safeNavigate('checkout'); }} className="w-full bg-stone-900 text-white py-5 rounded-2xl font-bold shadow-xl shadow-stone-900/10 hover:bg-stone-800 transition-all active:scale-[0.98]">
                 Proceed to Checkout

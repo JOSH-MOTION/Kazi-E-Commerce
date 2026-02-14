@@ -30,7 +30,7 @@ const Storefront: React.FC<StorefrontProps> = ({ addToCart }) => {
         />
         <div className="absolute inset-0 bg-gradient-to-b from-stone-950/20 via-stone-950/40 to-stone-950/80" />
         <div className="relative z-10 text-center px-4 max-w-3xl animate-fade-in">
-          <span className="text-orange-400 font-bold tracking-[0.4em] text-[10px] uppercase mb-6 block">Kazi Collection 2025</span>
+          <span className="text-orange-400 font-bold tracking-[0.4em] text-[10px] uppercase mb-6 block">Kazi Collection 2025 • Accra</span>
           <h2 className="text-5xl md:text-7xl font-serif text-white mb-8 tracking-tight">Essence of the Hustle.</h2>
           <button 
             onClick={() => document.getElementById('collection')?.scrollIntoView({ behavior: 'smooth' })}
@@ -111,7 +111,7 @@ const ProductCard = ({ product, onClick }: { product: Product, onClick: () => vo
         <div className="flex items-end justify-between">
           <div>
             <p className="text-[10px] text-stone-400 font-bold uppercase tracking-widest mb-1">Starting from</p>
-            <span className="font-bold text-stone-900 text-lg">UGX {product.basePrice.toLocaleString()}</span>
+            <span className="font-bold text-stone-900 text-lg">GH₵ {product.basePrice.toLocaleString()}</span>
           </div>
           <div className="flex -space-x-1.5">
             {Array.from(new Set(product.variants.map(v => v.hexColor))).map(color => (
@@ -159,7 +159,7 @@ const ProductModal = ({ product, onClose, addToCart }: any) => {
 
             <h2 className="text-4xl md:text-5xl font-serif font-bold text-stone-900 mb-4">{product.name}</h2>
             <div className="flex items-baseline gap-4 mb-8">
-              <p className="text-3xl font-bold text-stone-900">UGX {selectedVariant.price.toLocaleString()}</p>
+              <p className="text-3xl font-bold text-stone-900">GH₵ {selectedVariant.price.toLocaleString()}</p>
               {selectedVariant.isComingSoon && <span className="text-orange-500 font-bold uppercase tracking-widest text-[10px] bg-orange-50 px-3 py-1 rounded-full">Coming Soon</span>}
             </div>
 

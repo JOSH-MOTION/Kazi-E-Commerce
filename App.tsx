@@ -1,3 +1,4 @@
+
 'use client';
 import React, { useState, useEffect } from 'react';
 import { AppProvider, useAppContext } from './context/AppContext';
@@ -7,22 +8,24 @@ import CartDrawer from './components/CartDrawer';
 import Storefront from './components/Storefront';
 import Checkout from './components/Checkout';
 import AdminDashboard from './components/AdminDashboard';
+import OrdersList from './components/OrdersList';
 import AuthModal from './components/Auth';
-import { collection, onSnapshot, query, orderBy } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+import { collection, onSnapshot, query, orderBy, where } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import { db } from './firebase';
 import { Order } from './types';
 
 const Router = () => {
-  const { cart, cartTotal, profile, clearCart, addToCart, isAuthOpen, setIsAuthOpen } = useAppContext();
+  const { cart, cartTotal, profile, user, clearCart, addToCart, isAuthOpen, setIsAuthOpen } = useAppContext();
   const [view, setView] = useState<string>('store');
-  const [orders, setOrders] = useState<Order[]>([]);
+  const [adminOrders, setAdminOrders] = useState<Order[]>([]);
+  const [userOrders, setUserOrders] = useState<Order[]>([]);
 
-  // Robust SPA Routing based on window hash
+  // SPA Routing
   useEffect(() => {
     const handleHashChange = () => {
       const hash = window.location.hash.replace('#', '') || 'store';
       setView(hash);
-      window.scrollTo(0, 0); // Reset scroll on navigation
+      window.scrollTo(0, 0);
     };
     window.addEventListener('hashchange', handleHashChange);
     handleHashChange();
@@ -35,10 +38,28 @@ const Router = () => {
     const q = query(collection(db, 'orders'), orderBy('createdAt', 'desc'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Order));
-      setOrders(data);
+      setAdminOrders(data);
     });
     return () => unsubscribe();
   }, [profile]);
+
+  // User Data Sync (Real-time updates for client status)
+  useEffect(() => {
+    if (!user) {
+      setUserOrders([]);
+      return;
+    }
+    const q = query(
+      collection(db, 'orders'), 
+      where('userId', '==', user.uid),
+      orderBy('createdAt', 'desc')
+    );
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Order));
+      setUserOrders(data);
+    });
+    return () => unsubscribe();
+  }, [user]);
 
   const navigate = (path: string) => {
     window.location.hash = path;
@@ -51,6 +72,12 @@ const Router = () => {
       <main className="flex-grow animate-fade-in">
         {view === 'store' && <Storefront addToCart={addToCart} />}
         
+        {view === 'orders' && (
+          <div className="max-w-4xl mx-auto py-12 px-4">
+            <OrdersList orders={userOrders} />
+          </div>
+        )}
+
         {view === 'checkout' && (
           cart.length === 0 ? (
             <div className="min-h-[60vh] flex flex-col items-center justify-center text-center p-8">
@@ -65,7 +92,7 @@ const Router = () => {
               cart={cart} 
               total={cartTotal} 
               userProfile={profile}
-              onComplete={() => { clearCart(); navigate('store'); }}
+              onComplete={() => { clearCart(); navigate('orders'); }}
               onCancel={() => navigate('store')} 
             />
           )
@@ -73,12 +100,10 @@ const Router = () => {
 
         {view === 'admin' && (
           profile?.role === 'ADMIN' ? (
-            <AdminDashboard orders={orders} />
+            <AdminDashboard orders={adminOrders} />
           ) : (
             <div className="min-h-[60vh] flex flex-col items-center justify-center">
-              <div className="w-16 h-16 bg-stone-100 rounded-full flex items-center justify-center mb-4">
-                <span className="text-2xl">🔒</span>
-              </div>
+              <div className="w-16 h-16 bg-stone-100 rounded-full flex items-center justify-center mb-4 text-2xl">🔒</div>
               <p className="text-stone-500 font-bold uppercase tracking-widest text-xs">Access Restricted</p>
               <button onClick={() => navigate('store')} className="mt-6 text-stone-900 font-bold underline underline-offset-4">Return to Store</button>
             </div>
@@ -87,8 +112,6 @@ const Router = () => {
       </main>
 
       <Footer />
-      
-      {/* Modals rendered at root for proper stacking context */}
       <CartDrawer navigate={navigate} />
       {isAuthOpen && <AuthModal onClose={() => setIsAuthOpen(false)} />}
     </div>

@@ -60,7 +60,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ orders }) => {
         <header className="mb-12 flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div>
             <h1 className="text-4xl font-serif font-bold text-stone-900 mb-3">Operations Hub</h1>
-            <p className="text-stone-400 font-bold uppercase tracking-widest text-[10px]">Managing Trust and Fulfillment.</p>
+            <p className="text-stone-400 font-bold uppercase tracking-widest text-[10px]">Managing Trust and Fulfillment • Ghana.</p>
           </div>
           <div className="flex bg-white p-1.5 rounded-2xl border border-stone-200 shadow-sm">
             {[
@@ -81,7 +81,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ orders }) => {
         </header>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 mb-12">
-          <StatCard icon={<TrendingUp />} label="Total Revenue" value={`UGX ${stats.revenue.toLocaleString()}`} color="orange" />
+          <StatCard icon={<TrendingUp />} label="Total Revenue" value={`GH₵ ${stats.revenue.toLocaleString()}`} color="orange" />
           <StatCard icon={<AlertCircle />} label="MoMo Verification Pending" value={stats.pending.toString()} color="blue" />
           <StatCard icon={<Package />} label="Collection Volume" value={stats.total.toString()} color="stone" />
         </div>
@@ -216,7 +216,7 @@ const AddProductModal = ({ onClose }: { onClose: () => void }) => {
                 {CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
             </div>
-            <Field label="Base Price (UGX)" type="number" value={form.basePrice} onChange={v => setForm({...form, basePrice: v})} placeholder="15000" />
+            <Field label="Base Price (GH₵)" type="number" value={form.basePrice} onChange={v => setForm({...form, basePrice: v})} placeholder="150" />
           </div>
           <Field label="Description" value={form.description} onChange={v => setForm({...form, description: v})} placeholder="Tell the story of this item..." />
           <Field label="Hero Image URL" value={form.imageUrl} onChange={v => setForm({...form, imageUrl: v})} placeholder="Unsplash or Cloudinary URL" />
@@ -273,7 +273,7 @@ const OrdersTable = ({ orders, updateStatus }: { orders: Order[], updateStatus: 
                 <div className="text-[10px] font-bold text-stone-400 uppercase tracking-widest">{order.deliveryAddress.split(',')[0]}</div>
               </td>
               <td className="px-8 py-6">
-                <div className="font-bold text-stone-900">UGX {order.totalAmount.toLocaleString()}</div>
+                <div className="font-bold text-stone-900">GH₵ {order.totalAmount.toLocaleString()}</div>
               </td>
               <td className="px-8 py-6 text-xs font-mono font-bold tracking-wider text-stone-600">
                 {order.momoTransactionId || '---'}
@@ -313,7 +313,7 @@ const PromosView = () => (
           <div className="relative z-10">
             <div className="flex justify-between items-start mb-4">
               <div className="bg-stone-900 text-white px-4 py-2 rounded-xl font-mono text-sm font-bold tracking-widest">{promo.code}</div>
-              <span className="text-[10px] font-bold text-stone-400 uppercase tracking-widest">{promo.type === 'PERCENT' ? `${promo.value}% OFF` : `UGX ${promo.value} OFF`}</span>
+              <span className="text-[10px] font-bold text-stone-400 uppercase tracking-widest">{promo.type === 'PERCENT' ? `${promo.value}% OFF` : `GH₵ ${promo.value} OFF`}</span>
             </div>
             <p className="font-bold text-stone-900 mb-2">{promo.description}</p>
             <p className="text-[10px] font-bold text-stone-400 uppercase tracking-[0.2em]">Expires: {new Date(promo.endDate).toLocaleDateString()}</p>
