@@ -22,12 +22,21 @@ const App: React.FC = () => {
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
 
+  // Secret Admin Entrance Listener: Look for ?admin-page
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.has('admin-page') && user) {
+      setIsAdminGateOpen(true);
+      // Clean URL after triggering to keep it secret
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, [user]);
+
   // Firebase Auth Listener
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (u) => {
       setUser(u);
       if (u) {
-        // Fetch detailed profile from Firestore
         const docRef = doc(db, 'users', u.uid);
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
@@ -42,7 +51,6 @@ const App: React.FC = () => {
 
   // Firebase Firestore Listener for Orders (Gated for Admins only)
   useEffect(() => {
-    // Only subscribe to the full orders list if the user is an ADMIN
     if (profile?.role !== 'ADMIN') {
       setOrders([]);
       return;
@@ -55,13 +63,12 @@ const App: React.FC = () => {
         setOrders(ordersData);
       },
       (error) => {
-        // Silently log or handle the error without interrupting the UI
         console.warn('Orders sync restricted:', error.message);
       }
     );
 
     return () => unsubscribe();
-  }, [profile]); // Re-run whenever the profile (and thus role) changes
+  }, [profile]);
 
   // Cart Persistence
   useEffect(() => {
@@ -119,21 +126,13 @@ const App: React.FC = () => {
   };
 
   const toggleAdminView = () => {
-    if (view === 'admin') {
-      setView('store');
-      return;
-    }
-
     if (profile?.role === 'ADMIN') {
-      setView('admin');
-    } else {
-      setIsAdminGateOpen(true);
+      setView(view === 'admin' ? 'store' : 'admin');
     }
   };
 
   return (
     <div className="min-h-screen flex flex-col">
-      {/* Navigation */}
       <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-stone-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
@@ -160,13 +159,18 @@ const App: React.FC = () => {
                     </p>
                     <p className="text-xs font-bold text-stone-900">{profile?.fullName || user.displayName || 'Account'}</p>
                   </div>
-                  <button 
-                    onClick={toggleAdminView}
-                    className={`p-2.5 rounded-full transition-all ${view === 'admin' ? 'bg-stone-900 text-white shadow-lg' : 'text-stone-600 hover:bg-stone-100'}`}
-                    title="Operations Dashboard"
-                  >
-                    {profile?.role === 'ADMIN' ? <ShieldCheck size={20} className="text-orange-500" /> : <Package size={20} />}
-                  </button>
+                  
+                  {/* ADMIN ICON: Only visible once promoted to Admin */}
+                  {profile?.role === 'ADMIN' && (
+                    <button 
+                      onClick={toggleAdminView}
+                      className={`p-2.5 rounded-full transition-all ${view === 'admin' ? 'bg-stone-900 text-white shadow-lg' : 'text-stone-600 hover:bg-stone-100'}`}
+                      title="Operations Dashboard"
+                    >
+                      <ShieldCheck size={20} className="text-orange-500" />
+                    </button>
+                  )}
+
                   <button 
                     onClick={handleLogout}
                     className="p-2.5 text-stone-600 hover:bg-stone-100 rounded-full transition-all group"
@@ -217,7 +221,6 @@ const App: React.FC = () => {
         )}
       </main>
 
-      {/* Cart Drawer & Modals */}
       {isCartOpen && <CartDrawer cart={cart} total={cartTotal} totalItems={totalItems} updateQty={updateCartQuantity} remove={removeFromCart} onClose={() => setIsCartOpen(false)} onCheckout={() => {setIsCartOpen(false); setView('checkout');}} />}
       {isAuthOpen && <AuthModal onClose={() => setIsAuthOpen(false)} />}
       
@@ -234,7 +237,6 @@ const App: React.FC = () => {
   );
 };
 
-// Sub-components for cleaner App.tsx
 const CartDrawer = ({ cart, total, totalItems, updateQty, remove, onClose, onCheckout }: any) => (
   <div className="fixed inset-0 z-[100] overflow-hidden">
     <div className="absolute inset-0 bg-stone-900/40 backdrop-blur-sm" onClick={onClose} />
