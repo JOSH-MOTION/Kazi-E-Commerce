@@ -1,14 +1,27 @@
 
 'use client';
 import React from 'react';
-import { useRouter } from 'next/navigation';
 import { X, ShoppingCart } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 import { PRODUCTS } from '../constants';
 
-const CartDrawer = () => {
+interface CartDrawerProps {
+  // FIX: Make navigate optional to support Next.js server component layout usage
+  navigate?: (path: string) => void;
+}
+
+const CartDrawer: React.FC<CartDrawerProps> = ({ navigate }) => {
   const { cart, cartTotal, totalItems, isCartOpen, setIsCartOpen, updateCartQuantity, removeFromCart } = useAppContext();
-  const router = useRouter();
+
+  // FIX: Provide a safe navigation wrapper for Next.js app directory compatibility
+  const safeNavigate = (path: string) => {
+    if (navigate) {
+      navigate(path);
+    } else {
+      const target = path === 'store' ? '/' : `/${path}`;
+      window.location.href = target;
+    }
+  };
 
   if (!isCartOpen) return null;
 
@@ -65,7 +78,7 @@ const CartDrawer = () => {
                 <span className="text-stone-500 font-medium">Estimated Total</span>
                 <span className="text-2xl font-bold text-stone-900">UGX {cartTotal.toLocaleString()}</span>
               </div>
-              <button onClick={() => { setIsCartOpen(false); router.push('/checkout'); }} className="w-full bg-stone-900 text-white py-5 rounded-2xl font-bold shadow-xl shadow-stone-900/10 hover:bg-stone-800 transition-all active:scale-[0.98]">
+              <button onClick={() => { setIsCartOpen(false); safeNavigate('checkout'); }} className="w-full bg-stone-900 text-white py-5 rounded-2xl font-bold shadow-xl shadow-stone-900/10 hover:bg-stone-800 transition-all active:scale-[0.98]">
                 Proceed to Checkout
               </button>
             </div>

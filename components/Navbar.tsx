@@ -1,20 +1,27 @@
-
 'use client';
 import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
 import { ShoppingCart, LogOut, ShieldCheck, User as UserIcon } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
-import AuthModal from './Auth';
 import AdminGate from './AdminGate';
 import { signOut } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
 import { auth } from '../firebase';
 
-const Navbar = () => {
-  const { user, profile, totalItems, setIsCartOpen } = useAppContext();
-  const [isAuthOpen, setIsAuthOpen] = useState(false);
+interface NavbarProps {
+  navigate?: (path: string) => void;
+}
+
+const Navbar: React.FC<NavbarProps> = ({ navigate }) => {
+  const { user, profile, totalItems, setIsCartOpen, setIsAuthOpen } = useAppContext();
   const [isAdminGateOpen, setIsAdminGateOpen] = useState(false);
-  const pathname = usePathname();
+
+  const safeNavigate = (path: string) => {
+    if (navigate) {
+      navigate(path);
+    } else {
+      const target = path === 'store' ? '/' : `/${path}`;
+      window.location.href = target;
+    }
+  };
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -26,19 +33,20 @@ const Navbar = () => {
 
   const handleLogout = () => {
     signOut(auth);
+    safeNavigate('store');
   };
 
   return (
-    <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-stone-200">
+    <nav className="sticky top-0 z-[100] bg-white/80 backdrop-blur-md border-b border-stone-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
-          <Link href="/" className="text-2xl font-bold tracking-tighter font-serif text-stone-900">
+          <button onClick={() => safeNavigate('store')} className="text-2xl font-bold tracking-tighter font-serif text-stone-900">
             KAZI
-          </Link>
+          </button>
 
           <div className="hidden md:flex space-x-8 text-sm font-medium text-stone-600">
-            <Link href="/" className={`hover:text-stone-900 transition ${pathname === '/' ? 'text-stone-900' : ''}`}>Collection</Link>
-            <Link href="#" className="hover:text-stone-900 transition">Journal</Link>
+            <button onClick={() => safeNavigate('store')} className="hover:text-stone-900 transition">Collection</button>
+            <button className="hover:text-stone-900 transition">Journal</button>
           </div>
 
           <div className="flex items-center gap-1 md:gap-3">
@@ -52,12 +60,12 @@ const Navbar = () => {
                 </div>
                 
                 {profile?.role === 'ADMIN' && (
-                  <Link 
-                    href="/admin"
-                    className={`p-2.5 rounded-full transition-all ${pathname === '/admin' ? 'bg-stone-900 text-white' : 'text-stone-600 hover:bg-stone-100'}`}
+                  <button 
+                    onClick={() => safeNavigate('admin')}
+                    className="p-2.5 rounded-full text-stone-600 hover:bg-stone-100 transition-all"
                   >
                     <ShieldCheck size={20} className="text-orange-500" />
-                  </Link>
+                  </button>
                 )}
 
                 <button onClick={handleLogout} className="p-2.5 text-stone-600 hover:bg-stone-100 rounded-full transition-all">
@@ -91,11 +99,10 @@ const Navbar = () => {
         </div>
       </div>
 
-      {isAuthOpen && <AuthModal onClose={() => setIsAuthOpen(false)} />}
       {isAdminGateOpen && user && (
         <AdminGate 
           uid={user.uid} 
-          onSuccess={() => { setIsAdminGateOpen(false); window.location.href = '/admin'; }} 
+          onSuccess={() => { setIsAdminGateOpen(false); safeNavigate('admin'); }} 
           onClose={() => setIsAdminGateOpen(false)} 
         />
       )}

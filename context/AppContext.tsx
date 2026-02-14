@@ -1,4 +1,3 @@
-
 'use client';
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import { auth, db } from '../firebase';
@@ -15,6 +14,8 @@ interface AppContextType {
   totalItems: number;
   isCartOpen: boolean;
   setIsCartOpen: (open: boolean) => void;
+  isAuthOpen: boolean;
+  setIsAuthOpen: (open: boolean) => void;
   addToCart: (productId: string, variantId: string, quantity: number) => void;
   removeFromCart: (variantId: string) => void;
   updateCartQuantity: (variantId: string, delta: number) => void;
@@ -28,6 +29,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [profile, setProfile] = useState<any>(null);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [isAuthOpen, setIsAuthOpen] = useState(false);
 
   // Auth Sync
   useEffect(() => {
@@ -95,6 +97,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   return (
     <AppContext.Provider value={{
       user, profile, cart, cartTotal, totalItems, isCartOpen, setIsCartOpen,
+      isAuthOpen, setIsAuthOpen,
       addToCart, removeFromCart, updateCartQuantity, clearCart
     }}>
       {children}

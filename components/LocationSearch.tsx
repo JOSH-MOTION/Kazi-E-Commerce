@@ -1,4 +1,5 @@
 
+'use client';
 import React, { useState, useEffect, useRef } from 'react';
 import { MapPin, Search, Loader2 } from 'lucide-react';
 
@@ -8,9 +9,14 @@ const UGANDA_LOCATIONS = [
   "Kansanga", "Kabiru", "Muyenga", "Buziga", "Munyonyo", "Kiwatule", "Najjeera", "Kyanja", "Ntinda", "Naguru", "Kololo", "Bukoto", "Lweza", "Kajjansi", "Seguku"
 ];
 
-interface LocationSearchProps { value: string; onChange: (value: string) => void; placeholder?: string; }
+interface LocationSearchProps { 
+  value: string; 
+  onChange: (value: string) => void; 
+  placeholder?: string; 
+  minimal?: boolean;
+}
 
-const LocationSearch: React.FC<LocationSearchProps> = ({ value, onChange, placeholder }) => {
+const LocationSearch: React.FC<LocationSearchProps> = ({ value, onChange, placeholder, minimal }) => {
   const [query, setQuery] = useState(value);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [isOpen, setIsOpen] = useState(false);
@@ -28,6 +34,31 @@ const LocationSearch: React.FC<LocationSearchProps> = ({ value, onChange, placeh
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  if (minimal) {
+    return (
+      <div className="relative w-full" ref={wrapperRef}>
+        <div className="flex items-center gap-3 pb-2">
+          <MapPin className="text-stone-300 group-focus-within:text-stone-900 transition-colors" size={18} />
+          <input 
+            type="text" value={query} onChange={e => { setQuery(e.target.value); onChange(e.target.value); }}
+            onFocus={() => setIsOpen(true)}
+            className="w-full bg-transparent outline-none text-sm font-bold text-stone-900 placeholder:text-stone-200"
+            placeholder={placeholder || "Area..."}
+          />
+        </div>
+        {isOpen && suggestions.length > 0 && (
+          <div className="absolute z-[150] w-full mt-2 bg-white border border-stone-100 rounded-xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2">
+            {suggestions.map((loc, idx) => (
+              <button key={idx} type="button" onClick={() => { setQuery(loc); onChange(loc); setIsOpen(false); }} className="w-full text-left px-4 py-3 text-xs hover:bg-stone-50 transition-colors border-b border-stone-50 last:border-0 font-bold text-stone-600 hover:text-stone-900">
+                {loc}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="relative group w-full" ref={wrapperRef}>
