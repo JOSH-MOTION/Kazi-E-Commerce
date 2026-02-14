@@ -1,14 +1,16 @@
+
 'use client';
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import { auth, db } from '../firebase';
 import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
-import { doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
-import { CartItem, ProductVariant } from '../types';
-import { PRODUCTS } from '../constants';
+import { doc, getDoc, collection, onSnapshot, query, orderBy } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+import { CartItem, Product, ProductVariant } from '../types';
+import { PRODUCTS as STATIC_PRODUCTS } from '../constants';
 
 interface AppContextType {
   user: any;
   profile: any;
+  products: Product[];
   cart: CartItem[];
   cartTotal: number;
   totalItems: number;
@@ -27,9 +29,25 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
+  const [products, setProducts] = useState<Product[]>(STATIC_PRODUCTS);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
+
+  // Sync Products from Firestore
+  useEffect(() => {
+    const q = query(collection(db, 'products'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      if (snapshot.empty) {
+        // If DB is empty, use static products as fallback
+        setProducts(STATIC_PRODUCTS);
+      } else {
+        const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
+        setProducts(data);
+      }
+    });
+    return () => unsubscribe();
+  }, []);
 
   // Auth Sync
   useEffect(() => {
@@ -62,11 +80,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const cartTotal = useMemo(() => {
     return cart.reduce((sum, item) => {
-      const product = PRODUCTS.find(p => p.id === item.productId);
+      const product = products.find(p => p.id === item.productId);
       const variant = product?.variants.find(v => v.id === item.variantId);
       return sum + (variant?.price || 0) * item.quantity;
     }, 0);
-  }, [cart]);
+  }, [cart, products]);
 
   const addToCart = (productId: string, variantId: string, quantity: number) => {
     setCart(prev => {
@@ -96,7 +114,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   return (
     <AppContext.Provider value={{
-      user, profile, cart, cartTotal, totalItems, isCartOpen, setIsCartOpen,
+      user, profile, products, cart, cartTotal, totalItems, isCartOpen, setIsCartOpen,
       isAuthOpen, setIsAuthOpen,
       addToCart, removeFromCart, updateCartQuantity, clearCart
     }}>
