@@ -4,13 +4,15 @@ import React, { createContext, useContext, useState, useEffect, useMemo } from '
 import { auth, db } from '../firebase';
 import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
 import { doc, getDoc, collection, onSnapshot, query, orderBy } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
-import { CartItem, Product, ProductVariant } from '../types';
-import { PRODUCTS as STATIC_PRODUCTS } from '../constants';
+import { CartItem, Product, Category, Promotion } from '../types';
+import { PRODUCTS as STATIC_PRODUCTS, CATEGORIES as STATIC_CATEGORIES, PROMOTIONS as STATIC_PROMOS } from '../constants';
 
 interface AppContextType {
   user: any;
   profile: any;
   products: Product[];
+  categories: Category[];
+  promotions: Promotion[];
   cart: CartItem[];
   cartTotal: number;
   totalItems: number;
@@ -29,21 +31,47 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
-  const [products, setProducts] = useState<Product[]>(STATIC_PRODUCTS);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [promotions, setPromotions] = useState<Promotion[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
 
   // Sync Products from Firestore
   useEffect(() => {
-    const q = query(collection(db, 'products'));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      if (snapshot.empty) {
-        // If DB is empty, use static products as fallback
+    const unsubscribe = onSnapshot(collection(db, 'products'), (snapshot) => {
+      if (snapshot.empty && STATIC_PRODUCTS.length > 0) {
         setProducts(STATIC_PRODUCTS);
       } else {
         const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
         setProducts(data);
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // Sync Categories from Firestore
+  useEffect(() => {
+    const unsubscribe = onSnapshot(collection(db, 'categories'), (snapshot) => {
+      if (snapshot.empty) {
+        setCategories(STATIC_CATEGORIES);
+      } else {
+        const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Category));
+        setCategories(data);
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // Sync Promotions from Firestore
+  useEffect(() => {
+    const unsubscribe = onSnapshot(collection(db, 'promotions'), (snapshot) => {
+      if (snapshot.empty) {
+        setPromotions(STATIC_PROMOS);
+      } else {
+        const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Promotion));
+        setPromotions(data);
       }
     });
     return () => unsubscribe();
@@ -114,7 +142,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   return (
     <AppContext.Provider value={{
-      user, profile, products, cart, cartTotal, totalItems, isCartOpen, setIsCartOpen,
+      user, profile, products, categories, promotions, cart, cartTotal, totalItems, isCartOpen, setIsCartOpen,
       isAuthOpen, setIsAuthOpen,
       addToCart, removeFromCart, updateCartQuantity, clearCart
     }}>
