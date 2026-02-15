@@ -30,6 +30,7 @@ export interface ProductVariant {
   price: number;
   stock: number;
   isComingSoon: boolean;
+  leadTime?: string; // e.g. "7-14 days", "2 weeks", "1 month"
 }
 
 export interface Product {

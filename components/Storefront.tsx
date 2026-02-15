@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { ShoppingBag, Star, Clock, ShieldCheck, X, AlertTriangle, ChevronLeft, ChevronRight, Tag } from 'lucide-react';
+import { ShoppingBag, Star, Clock, ShieldCheck, X, AlertTriangle, ChevronLeft, ChevronRight, Tag, CalendarClock, Zap } from 'lucide-react';
 import { Product, ProductVariant } from '../types';
 import { optimizeImage } from '../cloudinary';
 import { useAppContext } from '../context/AppContext';
@@ -95,7 +95,9 @@ const Storefront: React.FC<StorefrontProps> = ({ addToCart }) => {
 
 const ProductCard = ({ product, onClick }: { product: Product, onClick: () => void }) => {
   const isComingSoon = product.variants?.every(v => v.isComingSoon) || false;
-  const isOutOfStock = !isComingSoon && (product.variants?.every(v => v.stock === 0) || false);
+  const isOutOfStock = !isComingSoon && (product.variants?.every(v => v.stock === 0 && !v.leadTime) || false);
+  const hasInStock = product.variants?.some(v => v.stock > 0 && !v.isComingSoon);
+  const hasPreOrder = product.variants?.some(v => v.stock === 0 && !!v.leadTime && !v.isComingSoon);
 
   return (
     <div 
@@ -114,11 +116,18 @@ const ProductCard = ({ product, onClick }: { product: Product, onClick: () => vo
           {isComingSoon && (
             <span className="bg-stone-900 text-white text-[9px] font-bold px-3 py-1.5 rounded-full tracking-widest uppercase shadow-xl">Coming Soon</span>
           )}
-          {isOutOfStock && (
-            <span className="bg-stone-100 text-stone-500 text-[9px] font-bold px-3 py-1.5 rounded-full tracking-widest uppercase shadow-xl">Out of Stock</span>
+          {hasInStock && (
+            <span className="bg-green-600 text-white text-[9px] font-bold px-3 py-1.5 rounded-full tracking-widest uppercase shadow-xl flex items-center gap-1.5">
+              <Zap size={10} fill="currentColor" /> Instant
+            </span>
           )}
-          {product.isFeatured && !isComingSoon && !isOutOfStock && (
-            <span className="bg-orange-500 text-white text-[9px] font-bold px-3 py-1.5 rounded-full tracking-widest uppercase shadow-xl">Featured</span>
+          {hasPreOrder && !hasInStock && (
+            <span className="bg-orange-600 text-white text-[9px] font-bold px-3 py-1.5 rounded-full tracking-widest uppercase shadow-xl flex items-center gap-1.5">
+              <CalendarClock size={10} /> Pre-order
+            </span>
+          )}
+          {isOutOfStock && !hasPreOrder && !hasInStock && (
+            <span className="bg-stone-100 text-stone-500 text-[9px] font-bold px-3 py-1.5 rounded-full tracking-widest uppercase shadow-xl">Out of Stock</span>
           )}
         </div>
       </div>
@@ -145,7 +154,9 @@ const ProductCard = ({ product, onClick }: { product: Product, onClick: () => vo
 
 const ProductModal = ({ product, onClose, addToCart }: any) => {
   const { categories } = useAppContext();
-  const [selectedVariant, setSelectedVariant] = useState<ProductVariant>(product.variants?.find((v:any) => v.stock > 0 && !v.isComingSoon) || product.variants?.[0]);
+  const [selectedVariant, setSelectedVariant] = useState<ProductVariant>(
+    product.variants?.find((v:any) => (v.stock > 0 || v.leadTime) && !v.isComingSoon) || product.variants?.[0]
+  );
   const [activeImageIdx, setActiveImageIdx] = useState(0);
   const [quantity, setQuantity] = useState(1);
 
@@ -155,7 +166,9 @@ const ProductModal = ({ product, onClose, addToCart }: any) => {
 
   const sizesForColor = product.variants?.filter((v: any) => v.colorName === selectedVariant?.colorName) || [];
 
-  const canPurchase = selectedVariant?.stock > 0 && !selectedVariant?.isComingSoon;
+  const isInStock = selectedVariant?.stock > 0 && !selectedVariant?.isComingSoon;
+  const isPreOrder = selectedVariant?.stock === 0 && !!selectedVariant?.leadTime && !selectedVariant?.isComingSoon;
+  const canPurchase = isInStock || isPreOrder;
 
   return (
     <div className="fixed inset-0 z-[1000] flex items-end sm:items-center justify-center overflow-hidden">
@@ -197,9 +210,24 @@ const ProductModal = ({ product, onClose, addToCart }: any) => {
             </nav>
 
             <h2 className="text-4xl lg:text-5xl font-serif font-bold text-stone-900 mb-4">{product.name}</h2>
-            <div className="flex items-baseline gap-4 mb-8">
+            <div className="flex flex-wrap items-center gap-4 mb-8">
               <p className="text-3xl font-bold text-stone-900">GH₵ {selectedVariant?.price.toLocaleString() || product.basePrice.toLocaleString()}</p>
-              {selectedVariant?.isComingSoon && <span className="text-orange-500 font-bold uppercase tracking-widest text-[10px] bg-orange-50 px-3 py-1 rounded-full">Coming Soon</span>}
+              
+              {selectedVariant?.isComingSoon && <span className="text-stone-500 font-bold uppercase tracking-widest text-[10px] bg-stone-100 px-3 py-1 rounded-full">Coming Soon</span>}
+              
+              {isInStock && (
+                <div className="flex items-center gap-2 bg-green-50 text-green-700 px-3 py-1 rounded-full border border-green-200">
+                  <Zap size={12} fill="currentColor" />
+                  <span className="text-[10px] font-bold uppercase tracking-widest">In Stock & Ready</span>
+                </div>
+              )}
+
+              {isPreOrder && (
+                <div className="flex items-center gap-2 bg-orange-50 text-orange-700 px-3 py-1 rounded-full border border-orange-200">
+                  <CalendarClock size={12} />
+                  <span className="text-[10px] font-bold uppercase tracking-widest">Ships in {selectedVariant.leadTime}</span>
+                </div>
+              )}
             </div>
 
             <p className="text-stone-500 text-sm leading-relaxed mb-10">{product.description}</p>
@@ -213,7 +241,7 @@ const ProductModal = ({ product, onClose, addToCart }: any) => {
                     <button 
                       key={c.id} 
                       onClick={() => {
-                        const firstAvail = product.variants.find((v:any) => v.colorName === c.colorName && v.stock > 0 && !v.isComingSoon) || 
+                        const firstAvail = product.variants.find((v:any) => v.colorName === c.colorName && (v.stock > 0 || v.leadTime) && !v.isComingSoon) || 
                                            product.variants.find((v:any) => v.colorName === c.colorName);
                         setSelectedVariant(firstAvail);
                       }} 
@@ -232,13 +260,13 @@ const ProductModal = ({ product, onClose, addToCart }: any) => {
                 <label className="text-[10px] font-bold uppercase text-stone-400 block mb-4 tracking-[0.2em]">Select Size</label>
                 <div className="flex flex-wrap gap-3">
                   {sizesForColor.map((s: any) => {
-                    const isDisabled = s.stock === 0 || s.isComingSoon;
+                    const isSelectable = (s.stock > 0 || !!s.leadTime) && !s.isComingSoon;
                     return (
                       <button 
                         key={s.id} 
-                        disabled={isDisabled}
+                        disabled={!isSelectable}
                         onClick={() => setSelectedVariant(s)} 
-                        className={`min-w-[4rem] px-6 py-4 text-xs font-bold border-2 rounded-2xl transition-all ${selectedVariant?.id === s.id ? 'bg-stone-900 text-white border-stone-900 shadow-xl shadow-stone-900/20' : isDisabled ? 'opacity-30 border-stone-100 cursor-not-allowed line-through' : 'bg-white border-stone-100 hover:border-stone-300'}`}
+                        className={`min-w-[4rem] px-6 py-4 text-xs font-bold border-2 rounded-2xl transition-all ${selectedVariant?.id === s.id ? 'bg-stone-900 text-white border-stone-900 shadow-xl shadow-stone-900/20' : !isSelectable ? 'opacity-30 border-stone-100 cursor-not-allowed line-through' : 'bg-white border-stone-100 hover:border-stone-300'}`}
                       >
                         {s.size}
                       </button>
@@ -264,7 +292,7 @@ const ProductModal = ({ product, onClose, addToCart }: any) => {
                 >
                   <ShoppingBag size={20} />
                   <span>
-                    {selectedVariant?.isComingSoon ? 'Coming Soon' : selectedVariant?.stock === 0 ? 'Out of Stock' : 'Add to Shopping Bag'}
+                    {selectedVariant?.isComingSoon ? 'Coming Soon' : (selectedVariant?.stock === 0 && !selectedVariant?.leadTime) ? 'Out of Stock' : isPreOrder ? 'Pre-order Now' : 'Add to Shopping Bag'}
                   </span>
                 </button>
               </div>
@@ -276,7 +304,7 @@ const ProductModal = ({ product, onClose, addToCart }: any) => {
                 </div>
                 <div className="flex items-center gap-3 text-stone-400 text-[10px] font-bold uppercase tracking-widest bg-stone-50 p-4 rounded-2xl">
                   <Clock size={18} className="text-orange-500" />
-                  <span>Fast Processing</span>
+                  <span>Secure Local Payment</span>
                 </div>
               </div>
             </div>

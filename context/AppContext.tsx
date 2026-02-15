@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import { auth, db } from '../firebase';
 import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
-import { doc, getDoc, collection, onSnapshot, query, orderBy } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+import { doc, collection, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import { CartItem, Product, Category, Promotion } from '../types';
 import { PRODUCTS as STATIC_PRODUCTS, CATEGORIES as STATIC_CATEGORIES, PROMOTIONS as STATIC_PROMOS } from '../constants';
 
@@ -38,7 +38,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
 
-  // Sync Products from Firestore
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, 'products'), (snapshot) => {
       if (snapshot.empty && STATIC_PRODUCTS.length > 0) {
@@ -51,7 +50,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return () => unsubscribe();
   }, []);
 
-  // Sync Categories from Firestore
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, 'categories'), (snapshot) => {
       if (snapshot.empty) {
@@ -64,7 +62,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return () => unsubscribe();
   }, []);
 
-  // Sync Promotions from Firestore
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, 'promotions'), (snapshot) => {
       if (snapshot.empty) {
@@ -77,31 +74,58 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return () => unsubscribe();
   }, []);
 
-  // Auth Sync
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (u) => {
-      setUser(u);
+    let profileUnsub: (() => void) | null = null;
+
+    const authUnsub = onAuthStateChanged(auth, (u) => {
+      if (profileUnsub) {
+        profileUnsub();
+        profileUnsub = null;
+      }
+
       if (u) {
-        const docRef = doc(db, 'users', u.uid);
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          setProfile(docSnap.data());
-        }
+        // Strict sanitization to prevent circular ref errors
+        setUser({
+          uid: u.uid,
+          email: u.email,
+          displayName: u.displayName,
+          photoURL: u.photoURL
+        });
+        
+        profileUnsub = onSnapshot(doc(db, 'users', u.uid), (snap) => {
+          if (snap.exists()) {
+            setProfile(snap.data());
+          } else {
+            setProfile(null);
+          }
+        });
       } else {
+        setUser(null);
         setProfile(null);
       }
     });
-    return () => unsubscribe();
+
+    return () => {
+      authUnsub();
+      if (profileUnsub) profileUnsub();
+    };
   }, []);
 
-  // Cart Storage Sync
   useEffect(() => {
     const saved = localStorage.getItem('kazi_cart_v2');
-    if (saved) setCart(JSON.parse(saved));
+    if (saved) {
+      try {
+        setCart(JSON.parse(saved));
+      } catch (e) {
+        setCart([]);
+      }
+    }
   }, []);
 
   useEffect(() => {
-    localStorage.setItem('kazi_cart_v2', JSON.stringify(cart));
+    if (cart.length >= 0) {
+      localStorage.setItem('kazi_cart_v2', JSON.stringify(cart));
+    }
   }, [cart]);
 
   const totalItems = useMemo(() => cart.reduce((sum, item) => sum + item.quantity, 0), [cart]);
@@ -109,7 +133,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const cartTotal = useMemo(() => {
     return cart.reduce((sum, item) => {
       const product = products.find(p => p.id === item.productId);
-      const variant = product?.variants.find(v => v.id === item.variantId);
+      const variant = product?.variants?.find(v => v.id === item.variantId);
       return sum + (variant?.price || 0) * item.quantity;
     }, 0);
   }, [cart, products]);
@@ -118,7 +142,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setCart(prev => {
       const existing = prev.find(item => item.variantId === variantId);
       if (existing) {
-        return prev.map(item => item.variantId === variantId ? { ...item, quantity: item.quantity + quantity } : item);
+        return prev.map(item =>
+          item.variantId === variantId ? { ...item, quantity: item.quantity + quantity } : item
+        );
       }
       return [...prev, { productId, variantId, quantity }];
     });
@@ -130,21 +156,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateCartQuantity = (variantId: string, delta: number) => {
-    setCart(prev => prev.map(item => {
-      if (item.variantId === variantId) {
-        return { ...item, quantity: Math.max(1, item.quantity + delta) };
-      }
-      return item;
-    }));
+    setCart(prev =>
+      prev.map(item =>
+        item.variantId === variantId
+          ? { ...item, quantity: Math.max(1, item.quantity + delta) }
+          : item
+      )
+    );
   };
 
   const clearCart = () => setCart([]);
 
   return (
     <AppContext.Provider value={{
-      user, profile, products, categories, promotions, cart, cartTotal, totalItems, isCartOpen, setIsCartOpen,
+      user, profile, products, categories, promotions,
+      cart, cartTotal, totalItems,
+      isCartOpen, setIsCartOpen,
       isAuthOpen, setIsAuthOpen,
-      addToCart, removeFromCart, updateCartQuantity, clearCart
+      addToCart, removeFromCart, updateCartQuantity, clearCart,
     }}>
       {children}
     </AppContext.Provider>
