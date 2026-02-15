@@ -1,7 +1,6 @@
 
 import React, { useState } from 'react';
-import { ShoppingBag, Star, Clock, ShieldCheck, X, AlertTriangle } from 'lucide-react';
-import { CATEGORIES } from '../constants';
+import { ShoppingBag, Star, Clock, ShieldCheck, X, AlertTriangle, ChevronLeft, ChevronRight, Tag } from 'lucide-react';
 import { Product, ProductVariant } from '../types';
 import { optimizeImage } from '../cloudinary';
 import { useAppContext } from '../context/AppContext';
@@ -11,7 +10,7 @@ interface StorefrontProps {
 }
 
 const Storefront: React.FC<StorefrontProps> = ({ addToCart }) => {
-  const { products } = useAppContext();
+  const { products, categories, promotions } = useAppContext();
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [activeCategory, setActiveCategory] = useState<string>('all');
 
@@ -21,6 +20,19 @@ const Storefront: React.FC<StorefrontProps> = ({ addToCart }) => {
 
   return (
     <div className="max-w-7xl mx-auto pb-20">
+      {/* Promotion Ticker */}
+      {promotions.length > 0 && (
+        <div className="bg-orange-600 text-white overflow-hidden py-2.5">
+          <div className="flex animate-[scroll_30s_linear_infinite] whitespace-nowrap">
+            {[...promotions, ...promotions].map((promo, idx) => (
+              <span key={idx} className="inline-flex items-center gap-2 mx-12 text-[10px] font-bold uppercase tracking-[0.2em]">
+                <Tag size={12} /> Use code <span className="text-yellow-300 px-2 py-0.5 border border-white/20 rounded">{promo.code}</span> for {promo.type === 'PERCENT' ? `${promo.value}% OFF` : `GH₵${promo.value} OFF`} • {promo.description}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Hero Section */}
       <section className="relative h-[50vh] md:h-[70vh] flex items-center justify-center overflow-hidden bg-stone-900">
         <img 
@@ -50,7 +62,7 @@ const Storefront: React.FC<StorefrontProps> = ({ addToCart }) => {
           >
             All Items
           </button>
-          {CATEGORIES.map(cat => (
+          {categories.map(cat => (
             <button 
               key={cat.id}
               onClick={() => setActiveCategory(cat.id)}
@@ -70,13 +82,20 @@ const Storefront: React.FC<StorefrontProps> = ({ addToCart }) => {
       </section>
 
       {selectedProduct && <ProductModal product={selectedProduct} onClose={() => setSelectedProduct(null)} addToCart={addToCart} />}
+      
+      <style>{`
+        @keyframes scroll {
+          0% { transform: translateX(0); }
+          100% { transform: translateX(-50%); }
+        }
+      `}</style>
     </div>
   );
 };
 
 const ProductCard = ({ product, onClick }: { product: Product, onClick: () => void }) => {
-  const isComingSoon = product.variants.every(v => v.isComingSoon);
-  const isOutOfStock = !isComingSoon && product.variants.every(v => v.stock === 0);
+  const isComingSoon = product.variants?.every(v => v.isComingSoon) || false;
+  const isOutOfStock = !isComingSoon && (product.variants?.every(v => v.stock === 0) || false);
 
   return (
     <div 
@@ -114,7 +133,7 @@ const ProductCard = ({ product, onClick }: { product: Product, onClick: () => vo
             <span className="font-bold text-stone-900 text-lg">GH₵ {product.basePrice.toLocaleString()}</span>
           </div>
           <div className="flex -space-x-1.5">
-            {Array.from(new Set(product.variants.map(v => v.hexColor))).map(color => (
+            {Array.from(new Set(product.variants?.map(v => v.hexColor) || [])).map(color => (
               <div key={color} className="w-4 h-4 rounded-full border-2 border-white ring-1 ring-stone-100 shadow-sm" style={{ backgroundColor: color }} />
             ))}
           </div>
@@ -125,65 +144,87 @@ const ProductCard = ({ product, onClick }: { product: Product, onClick: () => vo
 };
 
 const ProductModal = ({ product, onClose, addToCart }: any) => {
-  const [selectedVariant, setSelectedVariant] = useState<ProductVariant>(product.variants.find((v:any) => v.stock > 0 && !v.isComingSoon) || product.variants[0]);
+  const { categories } = useAppContext();
+  const [selectedVariant, setSelectedVariant] = useState<ProductVariant>(product.variants?.find((v:any) => v.stock > 0 && !v.isComingSoon) || product.variants?.[0]);
+  const [activeImageIdx, setActiveImageIdx] = useState(0);
   const [quantity, setQuantity] = useState(1);
 
-  const colors = Array.from(new Set(product.variants.map((v: any) => v.colorName))).map(name => 
-    product.variants.find((v: any) => v.colorName === name)!
+  const colors = Array.from(new Set(product.variants?.map((v: any) => v.colorName) || [])).map(name => 
+    product.variants?.find((v: any) => v.colorName === name)!
   );
 
-  const sizesForColor = product.variants.filter((v: any) => v.colorName === selectedVariant?.colorName);
+  const sizesForColor = product.variants?.filter((v: any) => v.colorName === selectedVariant?.colorName) || [];
 
-  const canPurchase = selectedVariant.stock > 0 && !selectedVariant.isComingSoon;
+  const canPurchase = selectedVariant?.stock > 0 && !selectedVariant?.isComingSoon;
 
   return (
     <div className="fixed inset-0 z-[1000] flex items-end sm:items-center justify-center overflow-hidden">
       <div className="absolute inset-0 bg-stone-950/80 backdrop-blur-xl animate-in fade-in duration-500" onClick={onClose} />
       
-      <div className="relative w-full max-w-5xl bg-white sm:rounded-[2.5rem] shadow-2xl overflow-hidden animate-in slide-in-from-bottom duration-700 ease-out">
-        <button onClick={onClose} className="absolute top-6 right-6 z-10 bg-white/80 backdrop-blur p-3 rounded-full text-stone-900 hover:bg-white transition-all shadow-lg"><X size={20} /></button>
+      <div className="relative w-full max-w-6xl bg-white sm:rounded-[2.5rem] shadow-2xl overflow-hidden animate-in slide-in-from-bottom duration-700 ease-out">
+        <button onClick={onClose} className="absolute top-6 right-6 z-20 bg-white/80 backdrop-blur p-3 rounded-full text-stone-900 hover:bg-white transition-all shadow-lg"><X size={20} /></button>
         
-        <div className="flex flex-col lg:flex-row max-h-[90vh] overflow-y-auto">
+        <div className="flex flex-col lg:flex-row max-h-[95vh] overflow-y-auto">
           {/* Gallery Side */}
-          <div className="w-full lg:w-1/2 aspect-square lg:aspect-auto bg-stone-50 overflow-hidden">
-            <img src={optimizeImage(product.images[0], 1200)} className="w-full h-full object-cover transition-transform duration-[10s] hover:scale-110" />
+          <div className="w-full lg:w-3/5 relative bg-stone-50 overflow-hidden group">
+            <div className="aspect-[4/5] lg:aspect-auto h-full w-full">
+              <img src={optimizeImage(product.images[activeImageIdx], 1200)} className="w-full h-full object-cover transition-all duration-700" alt={product.name} />
+            </div>
+            
+            {product.images.length > 1 && (
+              <>
+                <div className="absolute inset-y-0 left-0 w-24 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button onClick={() => setActiveImageIdx(prev => (prev === 0 ? product.images.length - 1 : prev - 1))} className="p-3 bg-white/80 backdrop-blur rounded-full text-stone-900 shadow-xl hover:bg-white"><ChevronLeft size={24} /></button>
+                </div>
+                <div className="absolute inset-y-0 right-0 w-24 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button onClick={() => setActiveImageIdx(prev => (prev === product.images.length - 1 ? 0 : prev + 1))} className="p-3 bg-white/80 backdrop-blur rounded-full text-stone-900 shadow-xl hover:bg-white"><ChevronRight size={24} /></button>
+                </div>
+                <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex gap-2">
+                  {product.images.map((_:any, idx:number) => (
+                    <button key={idx} onClick={() => setActiveImageIdx(idx)} className={`w-2 h-2 rounded-full transition-all ${idx === activeImageIdx ? 'bg-stone-900 w-6' : 'bg-stone-300 hover:bg-stone-400'}`} />
+                  ))}
+                </div>
+              </>
+            )}
           </div>
 
           {/* Details Side */}
-          <div className="w-full lg:w-1/2 p-8 md:p-16 flex flex-col">
-            <nav className="mb-6 flex gap-2">
-              {CATEGORIES.filter(c => c.id === product.categoryId).map(c => (
-                <span key={c.id} className="text-[10px] font-bold uppercase tracking-widest text-stone-400">{c.name}</span>
-              ))}
+          <div className="w-full lg:w-2/5 p-8 md:p-12 lg:p-16 flex flex-col bg-white">
+            <nav className="mb-6">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-stone-400">
+                {categories.find(c => c.id === product.categoryId)?.name || 'Collection'}
+              </span>
             </nav>
 
-            <h2 className="text-4xl md:text-5xl font-serif font-bold text-stone-900 mb-4">{product.name}</h2>
+            <h2 className="text-4xl lg:text-5xl font-serif font-bold text-stone-900 mb-4">{product.name}</h2>
             <div className="flex items-baseline gap-4 mb-8">
-              <p className="text-3xl font-bold text-stone-900">GH₵ {selectedVariant.price.toLocaleString()}</p>
-              {selectedVariant.isComingSoon && <span className="text-orange-500 font-bold uppercase tracking-widest text-[10px] bg-orange-50 px-3 py-1 rounded-full">Coming Soon</span>}
+              <p className="text-3xl font-bold text-stone-900">GH₵ {selectedVariant?.price.toLocaleString() || product.basePrice.toLocaleString()}</p>
+              {selectedVariant?.isComingSoon && <span className="text-orange-500 font-bold uppercase tracking-widest text-[10px] bg-orange-50 px-3 py-1 rounded-full">Coming Soon</span>}
             </div>
 
-            <p className="text-stone-500 text-sm leading-loose mb-10">{product.description}</p>
+            <p className="text-stone-500 text-sm leading-relaxed mb-10">{product.description}</p>
             
             {/* Color Select */}
-            <div className="mb-10">
-              <label className="text-[10px] font-bold uppercase text-stone-400 block mb-4 tracking-[0.2em]">Select Color: <span className="text-stone-900">{selectedVariant.colorName}</span></label>
-              <div className="flex gap-4">
-                {colors.map((c: any) => (
-                  <button 
-                    key={c.id} 
-                    onClick={() => {
-                      const firstAvail = product.variants.find((v:any) => v.colorName === c.colorName && v.stock > 0 && !v.isComingSoon) || 
-                                         product.variants.find((v:any) => v.colorName === c.colorName);
-                      setSelectedVariant(firstAvail);
-                    }} 
-                    className={`w-12 h-12 rounded-full border-2 p-1 transition-all ${selectedVariant.colorName === c.colorName ? 'border-stone-900 scale-110' : 'border-transparent hover:border-stone-200'}`}
-                  >
-                    <div className="w-full h-full rounded-full shadow-inner" style={{ backgroundColor: c.hexColor }} />
-                  </button>
-                ))}
+            {colors.length > 0 && (
+              <div className="mb-10">
+                <label className="text-[10px] font-bold uppercase text-stone-400 block mb-4 tracking-[0.2em]">Select Color: <span className="text-stone-900">{selectedVariant?.colorName}</span></label>
+                <div className="flex gap-4">
+                  {colors.map((c: any) => (
+                    <button 
+                      key={c.id} 
+                      onClick={() => {
+                        const firstAvail = product.variants.find((v:any) => v.colorName === c.colorName && v.stock > 0 && !v.isComingSoon) || 
+                                           product.variants.find((v:any) => v.colorName === c.colorName);
+                        setSelectedVariant(firstAvail);
+                      }} 
+                      className={`w-12 h-12 rounded-full border-2 p-1 transition-all ${selectedVariant?.colorName === c.colorName ? 'border-stone-900 scale-110 shadow-lg' : 'border-transparent hover:border-stone-200'}`}
+                    >
+                      <div className="w-full h-full rounded-full shadow-inner" style={{ backgroundColor: c.hexColor }} />
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Size Select */}
             {sizesForColor.some((s: any) => s.size) && (
@@ -197,7 +238,7 @@ const ProductModal = ({ product, onClose, addToCart }: any) => {
                         key={s.id} 
                         disabled={isDisabled}
                         onClick={() => setSelectedVariant(s)} 
-                        className={`min-w-[4rem] px-6 py-4 text-xs font-bold border-2 rounded-2xl transition-all ${selectedVariant.id === s.id ? 'bg-stone-900 text-white border-stone-900 shadow-xl shadow-stone-900/20' : isDisabled ? 'opacity-30 border-stone-100 cursor-not-allowed line-through' : 'bg-white border-stone-100 hover:border-stone-300'}`}
+                        className={`min-w-[4rem] px-6 py-4 text-xs font-bold border-2 rounded-2xl transition-all ${selectedVariant?.id === s.id ? 'bg-stone-900 text-white border-stone-900 shadow-xl shadow-stone-900/20' : isDisabled ? 'opacity-30 border-stone-100 cursor-not-allowed line-through' : 'bg-white border-stone-100 hover:border-stone-300'}`}
                       >
                         {s.size}
                       </button>
@@ -223,7 +264,7 @@ const ProductModal = ({ product, onClose, addToCart }: any) => {
                 >
                   <ShoppingBag size={20} />
                   <span>
-                    {selectedVariant.isComingSoon ? 'Coming Soon' : selectedVariant.stock === 0 ? 'Out of Stock' : 'Add to Shopping Bag'}
+                    {selectedVariant?.isComingSoon ? 'Coming Soon' : selectedVariant?.stock === 0 ? 'Out of Stock' : 'Add to Shopping Bag'}
                   </span>
                 </button>
               </div>

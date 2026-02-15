@@ -2,9 +2,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { ChevronLeft, Info, Loader2, CheckCircle2, ShieldCheck, User, Phone, Copy, Ticket, X } from 'lucide-react';
 import { CartItem, Order, OrderStatus } from '../types';
-import { PRODUCTS, MOMO_CONFIG, PROMOTIONS } from '../constants';
+import { PRODUCTS, MOMO_CONFIG } from '../constants';
 import { db } from '../firebase';
 import { collection, addDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+import { useAppContext } from '../context/AppContext';
 import LocationSearch from './LocationSearch';
 
 interface CheckoutProps {
@@ -16,6 +17,7 @@ interface CheckoutProps {
 }
 
 const Checkout: React.FC<CheckoutProps> = ({ cart, total: subtotal, userProfile, onComplete, onCancel }) => {
+  const { promotions, products: liveProducts } = useAppContext();
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [loading, setLoading] = useState(false);
   const [promoCode, setPromoCode] = useState('');
@@ -39,7 +41,7 @@ const Checkout: React.FC<CheckoutProps> = ({ cart, total: subtotal, userProfile,
   const finalTotal = Math.max(0, subtotal - discountAmount);
 
   const applyPromo = () => {
-    const promo = PROMOTIONS.find(p => p.code.toUpperCase() === promoCode.toUpperCase());
+    const promo = promotions.find(p => p.code.toUpperCase() === promoCode.toUpperCase());
     if (promo) {
       setActivePromo(promo);
     } else {
@@ -90,6 +92,8 @@ const Checkout: React.FC<CheckoutProps> = ({ cart, total: subtotal, userProfile,
     </div>
   );
 
+  const currentProducts = liveProducts.length > 0 ? liveProducts : PRODUCTS;
+
   return (
     <div className="max-w-6xl mx-auto p-4 md:p-12 lg:p-16">
       <button onClick={onCancel} className="group flex items-center gap-3 text-stone-400 hover:text-stone-900 mb-12 font-bold text-[10px] uppercase tracking-[0.3em] transition-all">
@@ -97,7 +101,6 @@ const Checkout: React.FC<CheckoutProps> = ({ cart, total: subtotal, userProfile,
       </button>
       
       <div className="grid lg:grid-cols-12 gap-16 lg:gap-24">
-        {/* Left Col: Forms */}
         <div className="lg:col-span-7 space-y-12">
           <div className="flex items-center gap-8">
              <div className="flex items-center gap-4">
@@ -152,7 +155,7 @@ const Checkout: React.FC<CheckoutProps> = ({ cart, total: subtotal, userProfile,
                       <h3 className="text-4xl font-serif font-bold text-orange-400">GH₵ {finalTotal.toLocaleString()}</h3>
                     </div>
                     <div className="flex flex-col items-center md:items-end">
-                      <p className="text-stone-400 text-xs mb-2 uppercase tracking-widest font-bold">Merchant Number</p>
+                      <p className="text-stone-400 text-xs mb-2 uppercase tracking-widest font-bold">Joshua Doe</p>
                       <div className="flex items-center gap-4 bg-white/10 px-6 py-4 rounded-2xl border border-white/10 group cursor-pointer active:scale-95 transition-all" onClick={copyToClipboard}>
                         <span className="text-2xl font-mono font-bold tracking-wider">{MOMO_CONFIG.number}</span>
                         <Copy size={18} className={copied ? "text-green-400" : "text-stone-500"} />
@@ -161,7 +164,6 @@ const Checkout: React.FC<CheckoutProps> = ({ cart, total: subtotal, userProfile,
                     </div>
                   </div>
                 </div>
-                {/* Visual Accent */}
                 <div className="absolute -bottom-20 -right-20 w-64 h-64 bg-orange-600/10 rounded-full blur-[80px]" />
               </div>
 
@@ -174,7 +176,6 @@ const Checkout: React.FC<CheckoutProps> = ({ cart, total: subtotal, userProfile,
                   value={form.momoId} 
                   onChange={e => setForm({...form, momoId: e.target.value})}
                 />
-                <p className="text-[10px] text-stone-400 font-medium">Please enter the ID received in the SMS confirmation from your provider.</p>
               </div>
 
               <div className="flex flex-col md:flex-row gap-6">
@@ -191,20 +192,19 @@ const Checkout: React.FC<CheckoutProps> = ({ cart, total: subtotal, userProfile,
           )}
         </div>
 
-        {/* Right Col: Summary */}
         <div className="lg:col-span-5">
           <div className="bg-stone-50 p-10 rounded-[3rem] border border-stone-100/60 sticky top-28">
             <h3 className="text-2xl font-serif font-bold text-stone-900 mb-10">Summary</h3>
             
             <div className="space-y-6 mb-10">
               {cart.map((item, idx) => {
-                const product = PRODUCTS.find(p => p.id === item.productId);
-                const variant = product?.variants.find(v => v.id === item.variantId);
+                const product = currentProducts.find(p => p.id === item.productId);
+                const variant = product?.variants?.find(v => v.id === item.variantId);
                 return (
                   <div key={idx} className="flex justify-between items-center group">
                     <div className="flex items-center gap-4">
                       <div className="w-12 h-16 bg-stone-200 rounded-xl overflow-hidden shrink-0">
-                        <img src={product?.images[0]} className="w-full h-full object-cover" />
+                        <img src={product?.images[0]} className="w-full h-full object-cover" alt={product?.name} />
                       </div>
                       <div>
                         <p className="text-sm font-bold text-stone-900 line-clamp-1">{product?.name}</p>
@@ -217,7 +217,6 @@ const Checkout: React.FC<CheckoutProps> = ({ cart, total: subtotal, userProfile,
               })}
             </div>
 
-            {/* Promo Code Input */}
             <div className="pt-8 border-t border-stone-200/60 space-y-4 mb-8">
               <div className="flex gap-3">
                 <div className="relative flex-grow">
@@ -230,12 +229,7 @@ const Checkout: React.FC<CheckoutProps> = ({ cart, total: subtotal, userProfile,
                     className="w-full pl-12 pr-4 py-4 bg-white border border-stone-200 rounded-2xl outline-none focus:border-stone-900 transition-all text-xs font-bold uppercase tracking-widest"
                   />
                 </div>
-                <button 
-                  onClick={applyPromo}
-                  className="bg-stone-900 text-white px-6 rounded-2xl font-bold text-[10px] uppercase tracking-widest hover:bg-stone-800 transition-all"
-                >
-                  Apply
-                </button>
+                <button onClick={applyPromo} className="bg-stone-900 text-white px-6 rounded-2xl font-bold text-[10px] uppercase tracking-widest hover:bg-stone-800 transition-all">Apply</button>
               </div>
               {activePromo && (
                 <div className="flex items-center justify-between bg-orange-50 p-4 rounded-xl border border-orange-100">

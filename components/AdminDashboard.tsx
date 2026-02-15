@@ -1,9 +1,9 @@
+
 import React, { useState, useRef, useCallback } from 'react';
-import { TrendingUp, Clock, Package, CheckCircle, AlertCircle, Ticket, Edit3, Save, X, Plus, Loader2, Upload, Image as ImageIcon, Check } from 'lucide-react';
-import { Order, OrderStatus, Product, ProductVariant } from '../types';
+import { TrendingUp, Clock, Package, CheckCircle, AlertCircle, Ticket, Edit3, Save, X, Plus, Loader2, Upload, Image as ImageIcon, Check, Trash2, Layers } from 'lucide-react';
+import { Order, OrderStatus, Product, ProductVariant, Category, Promotion } from '../types';
 import { db } from '../firebase';
-import { updateDoc, doc, addDoc, collection } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
-import { CATEGORIES, PROMOTIONS } from '../constants';
+import { updateDoc, doc, addDoc, collection, deleteDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import { useAppContext } from '../context/AppContext';
 import { uploadToCloudinary } from '../cloudinary';
 
@@ -12,9 +12,11 @@ interface AdminDashboardProps {
 }
 
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ orders }) => {
-  const { products } = useAppContext();
-  const [activeTab, setActiveTab] = useState<'orders' | 'inventory' | 'promos'>('orders');
+  const { products, categories, promotions } = useAppContext();
+  const [activeTab, setActiveTab] = useState<'orders' | 'inventory' | 'promos' | 'categories'>('orders');
   const [isAddingProduct, setIsAddingProduct] = useState(false);
+  const [isAddingCategory, setIsAddingCategory] = useState(false);
+  const [isAddingPromo, setIsAddingPromo] = useState(false);
   const [editingStock, setEditingStock] = useState<{ productId: string, variantId: string, value: string } | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -60,16 +62,17 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ orders }) => {
             <h1 className="text-4xl font-serif font-bold text-stone-900 mb-3">Operations Hub</h1>
             <p className="text-stone-400 font-bold uppercase tracking-widest text-[10px]">Managing Trust and Fulfillment • Ghana.</p>
           </div>
-          <div className="flex bg-white p-1.5 rounded-2xl border border-stone-200 shadow-sm">
+          <div className="flex bg-white p-1.5 rounded-2xl border border-stone-200 shadow-sm overflow-x-auto scrollbar-hide">
             {[
               { id: 'orders', label: 'Orders', icon: Package },
-              { id: 'inventory', label: 'Inventory', icon: TrendingUp },
+              { id: 'inventory', label: 'Products', icon: Layers },
+              { id: 'categories', label: 'Categories', icon: TrendingUp },
               { id: 'promos', label: 'Promotions', icon: Ticket }
             ].map(tab => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
-                className={`flex items-center gap-2 px-6 py-3 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${activeTab === tab.id ? 'bg-stone-900 text-white shadow-xl' : 'text-stone-400 hover:text-stone-900'}`}
+                className={`flex items-center gap-2 px-6 py-3 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === tab.id ? 'bg-stone-900 text-white shadow-xl' : 'text-stone-400 hover:text-stone-900'}`}
               >
                 <tab.icon size={14} />
                 <span>{tab.label}</span>
@@ -108,12 +111,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ orders }) => {
                   <div className="flex-grow">
                     <div className="flex items-center gap-3 mb-2">
                       <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-stone-400">
-                        {CATEGORIES.find(c => c.id === product.categoryId)?.name}
+                        {categories.find(c => c.id === product.categoryId)?.name || 'Misc'}
                       </span>
                       <h3 className="text-xl font-bold text-stone-900">{product.name}</h3>
                     </div>
                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mt-6">
-                      {product.variants.map(v => {
+                      {product.variants?.map(v => {
                         const isEditing = editingStock?.variantId === v.id;
                         return (
                           <div key={v.id} className={`p-4 rounded-2xl border-2 transition-all ${isEditing ? 'border-orange-500 bg-orange-50/30' : 'border-stone-50 bg-stone-50/50 hover:bg-white hover:border-stone-100'}`}>
@@ -134,7 +137,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ orders }) => {
                                 </div>
                               ) : (
                                 <>
-                                  <span className={`text-sm font-bold ${v.stock < 5 ? 'text-red-500' : 'text-stone-900'}`}>{v.stock} in stock</span>
+                                  <span className={`text-sm font-bold ${v.stock < 5 ? 'text-red-500' : 'text-stone-900'}`}>{v.stock} stock</span>
                                   <button
                                     onClick={() => setEditingStock({ productId: product.id, variantId: v.id, value: v.stock.toString() })}
                                     className="text-stone-300 hover:text-stone-900 transition-colors"
@@ -155,231 +158,226 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ orders }) => {
           </div>
         )}
 
-        {activeTab === 'promos' && <PromosView />}
+        {activeTab === 'categories' && (
+          <div className="space-y-8 animate-in fade-in duration-500">
+            <div className="flex justify-between items-center">
+              <h2 className="font-serif font-bold text-3xl">Categories</h2>
+              <button onClick={() => setIsAddingCategory(true)} className="bg-stone-900 text-white px-8 py-4 rounded-2xl font-bold text-xs uppercase tracking-widest flex items-center gap-3"><Plus size={18} /> <span>New Category</span></button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {categories.map(cat => (
+                <div key={cat.id} className="bg-white p-6 rounded-3xl border border-stone-100 shadow-sm flex items-center justify-between">
+                  <div className="font-bold text-stone-900">{cat.name}</div>
+                  <button onClick={() => deleteDoc(doc(db, 'categories', cat.id))} className="text-stone-300 hover:text-red-500 transition-colors"><Trash2 size={18} /></button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'promos' && (
+           <div className="space-y-8 animate-in fade-in duration-500">
+            <div className="flex justify-between items-center">
+              <h2 className="font-serif font-bold text-3xl">Promotions</h2>
+              <button onClick={() => setIsAddingPromo(true)} className="bg-stone-900 text-white px-8 py-4 rounded-2xl font-bold text-xs uppercase tracking-widest flex items-center gap-3"><Plus size={18} /> <span>New Promo</span></button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {promotions.map(promo => (
+                <div key={promo.id} className="p-8 bg-white rounded-3xl border border-stone-100 relative overflow-hidden group">
+                   <div className="flex justify-between items-start mb-4">
+                    <div className="bg-orange-600 text-white px-4 py-2 rounded-xl font-mono text-sm font-bold tracking-widest">{promo.code}</div>
+                    <button onClick={() => deleteDoc(doc(db, 'promotions', promo.id))} className="text-stone-300 hover:text-red-500 transition-colors"><Trash2 size={18} /></button>
+                  </div>
+                  <p className="font-bold text-stone-900 mb-2">{promo.description}</p>
+                  <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest">{promo.type === 'PERCENT' ? `${promo.value}% OFF` : `GH₵${promo.value} OFF`}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {isAddingProduct && <AddProductModal onClose={() => setIsAddingProduct(false)} />}
+      {isAddingCategory && <AddCategoryModal onClose={() => setIsAddingCategory(false)} />}
+      {isAddingPromo && <AddPromoModal onClose={() => setIsAddingPromo(false)} />}
     </div>
   );
 };
 
-// ─── Image Upload Component ──────────────────────────────────────────────────
+// ─── Modals ──────────────────────────────────────────────────────────────────
 
-interface ImageUploadProps {
-  value: string;
-  onChange: (url: string) => void;
-}
-
-const ImageUpload: React.FC<ImageUploadProps> = ({ value, onChange }) => {
-  const [uploading, setUploading] = useState(false);
-  const [dragOver, setDragOver] = useState(false);
-  const [error, setError] = useState('');
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const processFile = useCallback(async (file: File) => {
-    if (!file.type.startsWith('image/')) {
-      setError('Please upload an image file (JPG, PNG, WEBP, etc.)');
-      return;
-    }
-    if (file.size > 10 * 1024 * 1024) {
-      setError('Image must be under 10MB.');
-      return;
-    }
-
-    setError('');
-    setUploading(true);
-    try {
-      const url = await uploadToCloudinary(file);
-      onChange(url);
-    } catch (err: any) {
-      setError(err.message || 'Upload failed. Check your Cloudinary config.');
-    } finally {
-      setUploading(false);
-    }
-  }, [onChange]);
-
-  const handleDrop = useCallback((e: React.DragEvent) => {
+const AddCategoryModal = ({ onClose }: any) => {
+  const [name, setName] = useState('');
+  const [loading, setLoading] = useState(false);
+  const handleSubmit = async (e: any) => {
     e.preventDefault();
-    setDragOver(false);
-    const file = e.dataTransfer.files[0];
-    if (file) processFile(file);
-  }, [processFile]);
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) processFile(file);
+    setLoading(true);
+    await addDoc(collection(db, 'categories'), { name, slug: name.toLowerCase().replace(/ /g, '-') });
+    onClose();
   };
-
   return (
-    <div className="space-y-2">
-      <label className="text-[10px] font-bold uppercase text-stone-400 tracking-widest block">
-        Hero Image
-      </label>
-
-      {/* Drop zone */}
-      <div
-        onClick={() => !uploading && fileInputRef.current?.click()}
-        onDragOver={e => { e.preventDefault(); setDragOver(true); }}
-        onDragLeave={() => setDragOver(false)}
-        onDrop={handleDrop}
-        className={`relative w-full rounded-2xl border-2 border-dashed transition-all cursor-pointer overflow-hidden
-          ${dragOver ? 'border-orange-500 bg-orange-50/40' : 'border-stone-200 bg-stone-50/50 hover:border-stone-400 hover:bg-stone-50'}
-          ${uploading ? 'pointer-events-none opacity-70' : ''}
-        `}
-        style={{ minHeight: '160px' }}
-      >
-        {/* Preview */}
-        {value && !uploading && (
-          <div className="relative w-full h-40">
-            <img
-              src={value}
-              alt="Product preview"
-              className="w-full h-full object-cover"
-            />
-            <div className="absolute inset-0 bg-stone-900/0 hover:bg-stone-900/40 transition-all flex items-center justify-center">
-              <div className="opacity-0 hover:opacity-100 transition-opacity bg-white rounded-xl px-4 py-2 flex items-center gap-2 text-xs font-bold text-stone-900 shadow-lg">
-                <Upload size={14} />
-                Replace Image
-              </div>
-            </div>
-            <div className="absolute top-3 right-3 bg-green-500 text-white rounded-full p-1 shadow-lg">
-              <Check size={12} />
-            </div>
-          </div>
-        )}
-
-        {/* Upload state */}
-        {uploading && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-white/80 backdrop-blur-sm">
-            <Loader2 className="animate-spin text-orange-500" size={28} />
-            <span className="text-xs font-bold text-stone-500 uppercase tracking-widest">Uploading to Cloudinary…</span>
-          </div>
-        )}
-
-        {/* Empty state */}
-        {!value && !uploading && (
-          <div className="flex flex-col items-center justify-center gap-3 py-10 px-4 text-center">
-            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-colors ${dragOver ? 'bg-orange-100' : 'bg-stone-100'}`}>
-              <Upload size={22} className={dragOver ? 'text-orange-500' : 'text-stone-400'} />
-            </div>
-            <div>
-              <p className="text-sm font-bold text-stone-700 mb-1">
-                {dragOver ? 'Drop image here' : 'Click or drag to upload'}
-              </p>
-              <p className="text-[10px] text-stone-400 font-medium uppercase tracking-widest">
-                JPG, PNG, WEBP • Max 10MB
-              </p>
-            </div>
-          </div>
-        )}
-
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          className="hidden"
-          onChange={handleFileChange}
-        />
-      </div>
-
-      {error && (
-        <p className="text-[10px] font-bold text-red-500 uppercase tracking-widest flex items-center gap-1">
-          <span>⚠</span> {error}
-        </p>
-      )}
+    <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-stone-950/80 backdrop-blur-md" onClick={onClose} />
+      <form onSubmit={handleSubmit} className="relative bg-white w-full max-w-sm rounded-[2.5rem] p-12">
+        <h2 className="text-2xl font-serif font-bold mb-8">New Category</h2>
+        <input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Footwear" className="w-full p-4 border rounded-2xl mb-8 outline-none focus:border-stone-900" required />
+        <button disabled={loading} className="w-full bg-stone-900 text-white py-4 rounded-2xl font-bold">{loading ? <Loader2 className="animate-spin mx-auto" /> : 'Create Category'}</button>
+      </form>
     </div>
   );
 };
 
-// ─── Add Product Modal ────────────────────────────────────────────────────────
+const AddPromoModal = ({ onClose }: any) => {
+  const [form, setForm] = useState({ code: '', description: '', type: 'PERCENT' as const, value: '' });
+  const [loading, setLoading] = useState(false);
+  const handleSubmit = async (e: any) => {
+    e.preventDefault();
+    setLoading(true);
+    await addDoc(collection(db, 'promotions'), { ...form, value: parseInt(form.value), startDate: new Date().toISOString(), endDate: '2030-01-01' });
+    onClose();
+  };
+  return (
+    <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-stone-950/80 backdrop-blur-md" onClick={onClose} />
+      <form onSubmit={handleSubmit} className="relative bg-white w-full max-w-md rounded-[2.5rem] p-12 space-y-4">
+        <h2 className="text-2xl font-serif font-bold mb-8">New Promotion</h2>
+        <input value={form.code} onChange={e => setForm({...form, code: e.target.value})} placeholder="Code (e.g. WELCOME20)" className="w-full p-4 border rounded-2xl outline-none" required />
+        <input value={form.description} onChange={e => setForm({...form, description: e.target.value})} placeholder="Description" className="w-full p-4 border rounded-2xl outline-none" required />
+        <div className="grid grid-cols-2 gap-4">
+          <select value={form.type} onChange={e => setForm({...form, type: e.target.value as any})} className="p-4 border rounded-2xl">
+            <option value="PERCENT">% OFF</option>
+            <option value="FIXED">GH₵ OFF</option>
+          </select>
+          <input type="number" value={form.value} onChange={e => setForm({...form, value: e.target.value})} placeholder="Value" className="w-full p-4 border rounded-2xl outline-none" required />
+        </div>
+        <button disabled={loading} className="w-full bg-stone-900 text-white py-4 rounded-2xl font-bold">{loading ? <Loader2 className="animate-spin mx-auto" /> : 'Active Promo'}</button>
+      </form>
+    </div>
+  );
+};
 
 const AddProductModal = ({ onClose }: { onClose: () => void }) => {
+  const { categories } = useAppContext();
   const [loading, setLoading] = useState(false);
-  const [form, setForm] = useState({
-    name: '',
-    description: '',
-    categoryId: CATEGORIES[0].id,
-    basePrice: '',
-    imageUrl: '',
-  });
+  const [images, setImages] = useState<string[]>([]);
+  const [variants, setVariants] = useState<ProductVariant[]>([]);
+  const [form, setForm] = useState({ name: '', description: '', categoryId: categories[0]?.id || '', basePrice: '' });
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+    setLoading(true);
+    try {
+      const uploadedUrls = [];
+      for (let i = 0; i < files.length; i++) {
+        const url = await uploadToCloudinary(files[i]);
+        uploadedUrls.push(url);
+      }
+      setImages(prev => [...prev, ...uploadedUrls]);
+    } catch (err) { alert('Image upload failed'); }
+    finally { setLoading(false); }
+  };
+
+  const addVariant = () => {
+    setVariants([...variants, { id: 'v-' + Date.now(), sku: 'SKU-' + Math.random().toString(36).substring(7).toUpperCase(), colorName: '', hexColor: '#000000', price: parseInt(form.basePrice) || 0, stock: 10, isComingSoon: false }]);
+  };
+
+  const updateVariant = (idx: number, field: keyof ProductVariant, val: any) => {
+    const updated = [...variants];
+    updated[idx] = { ...updated[idx], [field]: val };
+    setVariants(updated);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.imageUrl) {
-      alert('Please upload a product image before saving.');
-      return;
-    }
+    if (images.length === 0 || variants.length === 0) return alert('Please add images and at least one variant.');
     setLoading(true);
     try {
       await addDoc(collection(db, 'products'), {
-        name: form.name,
-        description: form.description,
-        categoryId: form.categoryId,
+        ...form,
         basePrice: parseInt(form.basePrice),
-        images: [form.imageUrl],
+        images,
+        variants,
         createdAt: new Date().toISOString(),
-        variants: [
-          {
-            id: 'v-' + Date.now(),
-            sku: 'NEW-ITEM',
-            size: 'M',
-            colorName: 'Default',
-            hexColor: '#000000',
-            price: parseInt(form.basePrice),
-            stock: 10,
-            isComingSoon: false
-          }
-        ]
       });
       onClose();
-    } catch (err) {
-      alert("Failed to create product.");
-    } finally {
-      setLoading(false);
-    }
+    } catch (err) { alert("Failed to save product."); }
+    finally { setLoading(false); }
   };
 
   return (
     <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-stone-950/80 backdrop-blur-md" onClick={onClose} />
-      <form
-        onSubmit={handleSubmit}
-        className="relative bg-white w-full max-w-xl rounded-[2.5rem] p-12 shadow-2xl animate-in zoom-in-95 duration-300 max-h-[90vh] overflow-y-auto"
-      >
-        <button type="button" onClick={onClose} className="absolute top-8 right-8 text-stone-400 hover:text-stone-900">
-          <X size={24} />
-        </button>
-        <h2 className="text-3xl font-serif font-bold text-stone-900 mb-8">New Item Entry</h2>
-
-        <div className="space-y-6">
-          <Field label="Item Name" value={form.name} onChange={(v: string) => setForm({ ...form, name: v })} placeholder="e.g. Premium Waffle Polo" />
-          <div className="grid grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <label className="text-[10px] font-bold uppercase text-stone-400 tracking-widest">Category</label>
-              <select
-                className="w-full p-4 bg-stone-50 border border-stone-100 rounded-2xl text-sm font-bold outline-none focus:border-stone-900 transition-all appearance-none"
-                value={form.categoryId}
-                onChange={e => setForm({ ...form, categoryId: e.target.value })}
-              >
-                {CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
+      <form onSubmit={handleSubmit} className="relative bg-white w-full max-w-4xl rounded-[2.5rem] p-12 shadow-2xl overflow-y-auto max-h-[90vh]">
+        <h2 className="text-3xl font-serif font-bold text-stone-900 mb-8">Craft New Product</h2>
+        
+        <div className="grid lg:grid-cols-2 gap-12">
+          <div className="space-y-6">
+            <Field label="Product Name" value={form.name} onChange={(v: string) => setForm({ ...form, name: v })} placeholder="e.g. Premium Linen Set" />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold uppercase text-stone-400 tracking-widest">Category</label>
+                <select className="w-full p-4 bg-stone-50 border rounded-2xl text-sm font-bold" value={form.categoryId} onChange={e => setForm({...form, categoryId: e.target.value})}>
+                  {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </div>
+              <Field label="Base Price (GH₵)" type="number" value={form.basePrice} onChange={(v: string) => setForm({ ...form, basePrice: v })} placeholder="150" />
             </div>
-            <Field label="Base Price (GH₵)" type="number" value={form.basePrice} onChange={(v: string) => setForm({ ...form, basePrice: v })} placeholder="150" />
-          </div>
-          <Field label="Description" value={form.description} onChange={(v: string) => setForm({ ...form, description: v })} placeholder="Tell the story of this item..." />
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold uppercase text-stone-400 tracking-widest">Description</label>
+              <textarea value={form.description} onChange={e => setForm({...form, description: e.target.value})} className="w-full p-4 bg-stone-50 border rounded-2xl min-h-[120px] outline-none text-sm font-bold" placeholder="The story of the product..." required />
+            </div>
 
-          {/* ← Replaced URL input with drag-and-drop uploader */}
-          <ImageUpload
-            value={form.imageUrl}
-            onChange={(url: string) => setForm({ ...form, imageUrl: url })}
-          />
+            <div className="space-y-4">
+              <label className="text-[10px] font-bold uppercase text-stone-400 tracking-widest block">Gallery ({images.length} images)</label>
+              <div className="grid grid-cols-4 gap-2">
+                {images.map((url, idx) => (
+                  <div key={idx} className="relative group aspect-square rounded-xl overflow-hidden bg-stone-100 border border-stone-200">
+                    <img src={url} className="w-full h-full object-cover" />
+                    <button type="button" onClick={() => setImages(images.filter((_, i) => i !== idx))} className="absolute top-1 right-1 bg-white p-1 rounded-full text-red-500 shadow-md opacity-0 group-hover:opacity-100 transition-opacity"><X size={12} /></button>
+                  </div>
+                ))}
+                <label className="aspect-square flex items-center justify-center border-2 border-dashed border-stone-200 rounded-xl cursor-pointer hover:border-stone-400 transition-all text-stone-400">
+                  <Plus size={24} />
+                  <input type="file" multiple accept="image/*" onChange={handleImageUpload} className="hidden" />
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <label className="text-[10px] font-bold uppercase text-stone-400 tracking-widest">Variant Builder</label>
+              <button type="button" onClick={addVariant} className="text-orange-600 font-bold text-[10px] uppercase tracking-widest flex items-center gap-2 hover:bg-orange-50 px-3 py-1.5 rounded-full">+ Add Variant</button>
+            </div>
+            <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 scrollbar-hide">
+              {variants.length === 0 && <p className="text-xs text-stone-300 italic text-center py-10">Add colors/sizes to allow purchases.</p>}
+              {variants.map((v, idx) => (
+                <div key={v.id} className="p-4 bg-stone-50 rounded-2xl border border-stone-100 space-y-4">
+                  <div className="flex justify-between items-center">
+                    <span className="text-[8px] font-bold text-stone-400 uppercase tracking-widest">Variant #{idx + 1}</span>
+                    <button type="button" onClick={() => setVariants(variants.filter((_, i) => i !== idx))} className="text-stone-300 hover:text-red-500"><Trash2 size={14} /></button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <input value={v.colorName} onChange={e => updateVariant(idx, 'colorName', e.target.value)} placeholder="Color (e.g. Ebony)" className="p-3 border rounded-xl text-xs font-bold bg-white" required />
+                    <div className="flex items-center gap-2 bg-white p-2 border rounded-xl">
+                      <input type="color" value={v.hexColor} onChange={e => updateVariant(idx, 'hexColor', e.target.value)} className="w-6 h-6 rounded border-0" />
+                      <span className="text-[10px] font-mono font-bold uppercase text-stone-400">{v.hexColor}</span>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-3">
+                    <input value={v.size || ''} onChange={e => updateVariant(idx, 'size', e.target.value)} placeholder="Size" className="p-3 border rounded-xl text-xs font-bold bg-white" />
+                    <input type="number" value={v.stock} onChange={e => updateVariant(idx, 'stock', parseInt(e.target.value))} placeholder="Stock" className="p-3 border rounded-xl text-xs font-bold bg-white" required />
+                    <input type="number" value={v.price} onChange={e => updateVariant(idx, 'price', parseInt(e.target.value))} placeholder="Price" className="p-3 border rounded-xl text-xs font-bold bg-white" required />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
 
-        <button
-          disabled={loading || !form.name || !form.basePrice || !form.imageUrl}
-          className="w-full bg-stone-900 text-white py-6 rounded-2xl font-bold mt-12 hover:bg-stone-800 transition-all flex items-center justify-center gap-3 shadow-2xl shadow-stone-900/20 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {loading ? <Loader2 className="animate-spin" /> : <span>Add to Live Catalog</span>}
+        <button disabled={loading} className="w-full bg-stone-900 text-white py-6 rounded-2xl font-bold mt-12 hover:bg-stone-800 transition-all flex items-center justify-center gap-3 shadow-2xl">
+          {loading ? <Loader2 className="animate-spin" /> : <span>Publish to Live Store</span>}
         </button>
       </form>
     </div>
@@ -450,30 +448,6 @@ const OrdersTable = ({ orders, updateStatus }: { orders: Order[], updateStatus: 
           ))}
         </tbody>
       </table>
-    </div>
-  </div>
-);
-
-const PromosView = () => (
-  <div className="bg-white rounded-3xl border border-stone-200 p-8 shadow-2xl shadow-stone-900/5">
-    <div className="flex justify-between items-center mb-8">
-      <h2 className="font-serif font-bold text-2xl">Active Campaigns</h2>
-      <button className="bg-stone-900 text-white px-6 py-3 rounded-2xl font-bold text-[10px] uppercase tracking-widest">+ Create Promo</button>
-    </div>
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      {PROMOTIONS.map(promo => (
-        <div key={promo.id} className="p-8 rounded-[2rem] border-2 border-stone-50 bg-stone-50/30 relative overflow-hidden group">
-          <div className="relative z-10">
-            <div className="flex justify-between items-start mb-4">
-              <div className="bg-stone-900 text-white px-4 py-2 rounded-xl font-mono text-sm font-bold tracking-widest">{promo.code}</div>
-              <span className="text-[10px] font-bold text-stone-400 uppercase tracking-widest">{promo.type === 'PERCENT' ? `${promo.value}% OFF` : `GH₵ ${promo.value} OFF`}</span>
-            </div>
-            <p className="font-bold text-stone-900 mb-2">{promo.description}</p>
-            <p className="text-[10px] font-bold text-stone-400 uppercase tracking-[0.2em]">Expires: {new Date(promo.endDate).toLocaleDateString()}</p>
-          </div>
-          <Ticket size={100} className="absolute -bottom-8 -right-8 text-stone-900/5 group-hover:text-stone-900/10 transition-colors" />
-        </div>
-      ))}
     </div>
   </div>
 );
