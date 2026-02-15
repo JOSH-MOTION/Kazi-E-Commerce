@@ -1,9 +1,9 @@
 
-import React, { useState, useMemo } from 'react';
-import { TrendingUp, Clock, Package, AlertCircle, Ticket, Edit3, Save, X, Plus, Loader2, Trash2, Layers, CalendarClock, ChevronDown, ChevronUp, Zap, Check, Sparkles, Palette } from 'lucide-react';
-import { Order, OrderStatus, Product, ProductVariant } from '../types';
+import React, { useState, useMemo, useEffect } from 'react';
+import { TrendingUp, Clock, Package, AlertCircle, Ticket, Edit3, Save, X, Plus, Loader2, Trash2, Layers, CalendarClock, ChevronDown, ChevronUp, Zap, Check, Sparkles, Palette, Settings, LayoutGrid, Image as ImageIcon } from 'lucide-react';
+import { Order, OrderStatus, Product, ProductVariant, Category, Promotion, StoreSettings } from '../types';
 import { db } from '../firebase';
-import { updateDoc, doc, addDoc, collection, deleteDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+import { updateDoc, doc, addDoc, collection, deleteDoc, setDoc, getDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import { useAppContext } from '../context/AppContext';
 import { uploadToCloudinary, optimizeImage } from '../cloudinary';
 
@@ -14,46 +14,10 @@ interface AdminDashboardProps {
 const STANDARD_SIZES = ['S', 'M', 'L', 'XL', 'XXL', 'OS'];
 
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ orders }) => {
-  const { products, categories } = useAppContext();
-  const [activeTab, setActiveTab] = useState<'orders' | 'inventory' | 'promos' | 'categories'>('orders');
+  const { products, categories, promotions, settings } = useAppContext();
+  const [activeTab, setActiveTab] = useState<'orders' | 'inventory' | 'promos' | 'categories' | 'settings'>('orders');
   const [isAddingProduct, setIsAddingProduct] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [editingStock, setEditingStock] = useState<{ productId: string, variantId: string, value: string } | null>(null);
-  const [saving, setSaving] = useState(false);
-
-  const updateOrderStatus = async (orderId: string, newStatus: OrderStatus) => {
-    try {
-      const orderRef = doc(db, 'orders', orderId);
-      await updateDoc(orderRef, { status: newStatus });
-    } catch (err) {
-      console.error('Failed to update status:', err);
-    }
-  };
-
-  const updateStock = async () => {
-    if (!editingStock) return;
-    setSaving(true);
-    try {
-      const product = products.find(p => p.id === editingStock.productId);
-      if (!product) return;
-      const newVariants = product.variants.map(v =>
-        v.id === editingStock.variantId ? { ...v, stock: parseInt(editingStock.value) || 0 } : v
-      );
-      const productRef = doc(db, 'products', editingStock.productId);
-      await updateDoc(productRef, { variants: newVariants });
-      setEditingStock(null);
-    } catch (err) {
-      alert("Failed to update stock.");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const deleteProduct = async (id: string) => {
-    if (confirm("Permanently delete this item?")) {
-      await deleteDoc(doc(db, 'products', id));
-    }
-  };
 
   const stats = {
     revenue: orders.filter(o => o.status !== OrderStatus.CANCELLED).reduce((sum, o) => sum + o.totalAmount, 0),
@@ -61,156 +25,241 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ orders }) => {
     total: orders.length
   };
 
+  const updateOrderStatus = async (orderId: string, newStatus: OrderStatus) => {
+    try {
+      await updateDoc(doc(db, 'orders', orderId), { status: newStatus });
+    } catch (err) {
+      alert("Failed to update status");
+    }
+  };
+
   return (
-    <div className="bg-stone-50 min-h-screen p-4 md:p-12 lg:p-16 relative">
-      <div className="max-w-7xl mx-auto">
-        <header className="mb-12 flex flex-col md:flex-row md:items-end justify-between gap-6">
+    <div className="bg-stone-50 min-h-screen p-4 md:p-10 relative w-full">
+      <div className="w-full">
+        <header className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div>
-            <h1 className="text-4xl font-serif font-bold text-stone-900 mb-3">Operations Hub</h1>
-            <p className="text-stone-400 font-bold uppercase tracking-widest text-[10px]">Managing Trust and Fulfillment • Ghana.</p>
+            <h1 className="text-3xl font-serif font-bold text-stone-900 mb-2 uppercase tracking-tighter">J&B Hub</h1>
+            <p className="text-stone-400 font-bold uppercase tracking-widest text-[8px]">Proprietary Retail Control • Accra.</p>
           </div>
-          <div className="flex bg-white p-1.5 rounded-2xl border border-stone-200 shadow-sm overflow-x-auto scrollbar-hide">
+          <div className="flex bg-white p-1 rounded-xl border border-stone-200 shadow-sm overflow-x-auto scrollbar-hide">
             {[
               { id: 'orders', label: 'Orders', icon: Package },
               { id: 'inventory', label: 'Products', icon: Layers },
-              { id: 'categories', label: 'Categories', icon: TrendingUp },
-              { id: 'promos', label: 'Promotions', icon: Ticket }
+              { id: 'categories', label: 'Categories', icon: LayoutGrid },
+              { id: 'promos', label: 'Promos', icon: Ticket },
+              { id: 'settings', label: 'Settings', icon: Settings }
             ].map(tab => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
-                className={`flex items-center gap-2 px-6 py-3 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === tab.id ? 'bg-stone-900 text-white shadow-xl' : 'text-stone-400 hover:text-stone-900'}`}
+                className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-[9px] font-bold uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === tab.id ? 'bg-stone-900 text-white shadow-md' : 'text-stone-400 hover:text-stone-900'}`}
               >
-                <tab.icon size={14} />
+                <tab.icon size={12} />
                 <span>{tab.label}</span>
               </button>
             ))}
           </div>
         </header>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 mb-12">
-          <StatCard icon={<TrendingUp size={20} />} label="Total Revenue" value={`GH₵ ${stats.revenue.toLocaleString()}`} color="orange" />
-          <StatCard icon={<AlertCircle size={20} />} label="MoMo Verification Pending" value={stats.pending.toString()} color="blue" />
-          <StatCard icon={<Package size={20} />} label="Collection Volume" value={stats.total.toString()} color="stone" />
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
+          <StatCard icon={<TrendingUp size={16} />} label="Gross Volume" value={`GH₵ ${stats.revenue.toLocaleString()}`} color="orange" />
+          <StatCard icon={<AlertCircle size={16} />} label="Awaiting Verification" value={stats.pending.toString()} color="blue" />
+          <StatCard icon={<Package size={16} />} label="Total Orders" value={stats.total.toString()} color="stone" />
         </div>
 
         {activeTab === 'orders' && <OrdersTable orders={orders} updateStatus={updateOrderStatus} />}
-
         {activeTab === 'inventory' && (
-          <div className="space-y-8 animate-in fade-in duration-500">
+          <div className="space-y-6 animate-in fade-in">
             <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-serif font-bold">Catalogue Management</h2>
-              <button 
-                onClick={() => setIsAddingProduct(true)}
-                className="bg-stone-900 text-white px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-widest flex items-center gap-2 hover:bg-stone-800 transition-all"
-              >
-                <Plus size={14} /> Add New Item
+              <h2 className="text-xl font-serif font-bold text-stone-900 uppercase">Catalogue</h2>
+              <button onClick={() => setIsAddingProduct(true)} className="bg-stone-900 text-white px-6 py-2.5 rounded-xl font-bold text-[9px] uppercase tracking-widest flex items-center gap-2 hover:bg-stone-800 shadow-lg">
+                <Plus size={12} /> Add Piece
               </button>
             </div>
-            
-            <div className="grid grid-cols-1 gap-6">
-              {products.map(product => (
-                <ProductAdminRow 
-                  key={product.id} 
-                  product={product} 
-                  onEdit={() => setEditingProduct(product)}
-                  onDelete={() => deleteProduct(product.id)}
-                  editingStock={editingStock}
-                  setEditingStock={setEditingStock}
-                  updateStock={updateStock}
-                  saving={saving}
-                />
+            <div className="grid grid-cols-1 gap-3">
+              {products.length === 0 ? (
+                <div className="py-20 bg-white rounded-2xl border border-stone-100 text-center text-stone-400">
+                  <Package className="mx-auto mb-3 opacity-20" size={32} />
+                  <p className="font-bold text-[9px] uppercase tracking-widest">No products yet</p>
+                </div>
+              ) : products.map(product => (
+                <ProductAdminRow key={product.id} product={product} onEdit={() => setEditingProduct(product)} />
               ))}
             </div>
           </div>
         )}
 
-        {(isAddingProduct || editingProduct) && (
-          <ProductForm 
-            product={editingProduct} 
-            onClose={() => { setIsAddingProduct(false); setEditingProduct(null); }} 
-          />
-        )}
+        {activeTab === 'categories' && <CategoryManager categories={categories} />}
+        {activeTab === 'promos' && <PromotionManager promotions={promotions} />}
+        {activeTab === 'settings' && <StoreSettingsManager settings={settings} />}
+
+        {(isAddingProduct || editingProduct) && <ProductForm product={editingProduct} onClose={() => { setIsAddingProduct(false); setEditingProduct(null); }} />}
       </div>
     </div>
   );
 };
 
-const ProductAdminRow = ({ product, onEdit, onDelete, editingStock, setEditingStock, updateStock, saving }: any) => {
-  const [isExpanded, setIsExpanded] = useState(false);
+const ProductAdminRow = ({ product, onEdit }: any) => {
   const { categories } = useAppContext();
-  
   return (
-    <div className="bg-white border border-stone-200 rounded-[2rem] overflow-hidden shadow-sm hover:shadow-md transition-shadow">
-      <div className="p-6 flex flex-col md:flex-row items-center gap-6">
-        <img src={optimizeImage(product.images[0], 200)} className="w-20 h-24 object-cover rounded-xl" />
-        <div className="flex-grow">
-          <h3 className="font-bold text-stone-900 mb-1">{product.name}</h3>
-          <p className="text-[10px] text-stone-400 font-bold uppercase tracking-widest">
-            {categories.find(c => c.id === product.categoryId)?.name || 'Uncategorized'} • {product.variants?.length || 0} Variants
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <button onClick={onEdit} className="p-3 text-stone-400 hover:text-stone-900 hover:bg-stone-50 rounded-xl transition-all">
-            <Edit3 size={18} />
-          </button>
-          <button onClick={onDelete} className="p-3 text-red-200 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all">
-            <Trash2 size={18} />
-          </button>
-          <button onClick={() => setIsExpanded(!isExpanded)} className="p-3 text-stone-400 hover:text-stone-900 hover:bg-stone-50 rounded-xl transition-all">
-            {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-          </button>
-        </div>
+    <div className="bg-white border border-stone-100 rounded-2xl p-4 flex items-center gap-4 shadow-sm group">
+      <div className="w-12 h-14 bg-stone-50 rounded-lg overflow-hidden shrink-0">
+        <img src={optimizeImage(product.images[0], 200)} className="w-full h-full object-cover" />
       </div>
-      
-      {isExpanded && (
-        <div className="px-6 pb-6 border-t border-stone-50 bg-stone-50/30">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
-            {product.variants?.map((v: ProductVariant) => (
-              <div key={v.id} className="bg-white p-5 rounded-2xl border border-stone-100 flex flex-col gap-3">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <span className="text-[10px] font-bold text-stone-400 uppercase tracking-widest">{v.colorName} / {v.size || 'OS'}</span>
-                    <p className="font-bold text-stone-900">GH₵ {v.price}</p>
-                  </div>
-                  <div className="w-4 h-4 rounded-full border border-stone-200" style={{ backgroundColor: v.hexColor }} />
-                </div>
-                
-                <div className="mt-2 flex flex-col gap-2">
-                  <div className="flex items-center justify-between">
-                    <label className="text-[9px] font-bold uppercase text-stone-400 tracking-widest">Inventory</label>
-                    {v.stock > 0 ? (
-                      <span className="flex items-center gap-1 text-[8px] font-bold text-green-600 uppercase"><Zap size={8} fill="currentColor"/> Instant</span>
-                    ) : v.leadTime ? (
-                      <span className="flex items-center gap-1 text-[8px] font-bold text-orange-600 uppercase"><CalendarClock size={8}/> Pre-order</span>
-                    ) : (
-                      <span className="text-[8px] font-bold text-stone-300 uppercase">Out of Stock</span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <input 
-                      type="number"
-                      placeholder="Stock"
-                      value={editingStock?.variantId === v.id ? editingStock.value : v.stock}
-                      onChange={(e) => setEditingStock({ productId: product.id, variantId: v.id, value: e.target.value })}
-                      className="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-lg text-xs font-bold outline-none focus:border-stone-900 transition-all"
-                    />
-                    {editingStock?.variantId === v.id && (
-                      <button 
-                        onClick={updateStock}
-                        disabled={saving}
-                        className="p-2 bg-stone-900 text-white rounded-lg hover:bg-stone-800 disabled:opacity-50"
-                      >
-                        {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-                      </button>
-                    )}
-                  </div>
-                </div>
+      <div className="flex-grow">
+        <h3 className="font-bold text-stone-900 text-xs">{product.name}</h3>
+        <p className="text-[8px] text-stone-400 font-bold uppercase tracking-widest mt-0.5">
+          {categories.find(c => c.id === product.categoryId)?.name} • {product.variants.length} Variants
+        </p>
+      </div>
+      <div className="flex gap-1">
+        <button onClick={onEdit} className="p-2 text-stone-300 hover:text-stone-900 rounded-lg transition-all"><Edit3 size={16} /></button>
+        <button onClick={async () => { if(confirm("Remove this piece?")) await deleteDoc(doc(db, 'products', product.id)); }} className="p-2 text-stone-200 hover:text-red-500 rounded-lg transition-all"><Trash2 size={16} /></button>
+      </div>
+    </div>
+  );
+};
+
+const CategoryManager = ({ categories }: { categories: Category[] }) => {
+  const [name, setName] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const addCategory = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name) return;
+    setSaving(true);
+    try {
+      await addDoc(collection(db, 'categories'), { name, slug: name.toLowerCase().replace(/\s+/g, '-') });
+      setName('');
+    } catch (e) { alert("Error adding category"); }
+    setSaving(false);
+  };
+
+  return (
+    <div className="max-w-xl">
+      <div className="bg-white rounded-2xl p-8 border border-stone-100 shadow-sm space-y-8">
+        <form onSubmit={addCategory} className="space-y-4">
+          <Input label="New Category Name" value={name} onChange={setName} placeholder="e.g. Leather Goods" />
+          <button disabled={saving} className="w-full py-4 bg-stone-900 text-white rounded-xl font-bold uppercase tracking-widest text-[9px] hover:bg-stone-800 shadow-lg transition-all active:scale-95">
+            {saving ? <Loader2 size={14} className="animate-spin mx-auto" /> : 'Create Category'}
+          </button>
+        </form>
+        <div className="space-y-2">
+          <h4 className="text-[8px] font-bold uppercase text-stone-400 tracking-widest">Active Categories</h4>
+          <div className="divide-y divide-stone-50">
+            {categories.map(c => (
+              <div key={c.id} className="py-3 flex justify-between items-center">
+                <span className="font-bold text-stone-900 text-xs">{c.name}</span>
+                <button onClick={() => deleteDoc(doc(db, 'categories', c.id))} className="text-stone-200 hover:text-red-500"><Trash2 size={14} /></button>
               </div>
             ))}
           </div>
         </div>
-      )}
+      </div>
+    </div>
+  );
+};
+
+const PromotionManager = ({ promotions }: { promotions: Promotion[] }) => {
+  const [form, setForm] = useState<Partial<Promotion>>({ code: '', value: 0, description: '', imageUrl: '' });
+  const [saving, setSaving] = useState(false);
+
+  const handleImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files?.[0]) return;
+    setSaving(true);
+    try {
+      const url = await uploadToCloudinary(e.target.files[0]);
+      setForm(prev => ({ ...prev, imageUrl: url }));
+    } catch (e) { alert("Image upload failed"); }
+    setSaving(false);
+  };
+
+  const addPromo = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if(!form.code || !form.value) return;
+    setSaving(true);
+    try {
+      await addDoc(collection(db, 'promotions'), {
+        ...form, type: 'PERCENT', targetType: 'STORE', startDate: new Date().toISOString(), endDate: '2026-12-31'
+      });
+      setForm({ code: '', value: 0, description: '', imageUrl: '' });
+    } catch (e) { alert("Error adding promo"); }
+    setSaving(false);
+  };
+
+  return (
+    <div className="max-w-2xl">
+      <div className="bg-white rounded-2xl p-8 border border-stone-100 shadow-sm space-y-8">
+        <form onSubmit={addPromo} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-4">
+            <Input label="Code" value={form.code} onChange={(v:any) => setForm({...form, code: v.toUpperCase()})} placeholder="SALE20" />
+            <Input label="Value (%)" type="number" value={form.value} onChange={(v:any) => setForm({...form, value: parseInt(v) || 0})} />
+            <Input label="Label" value={form.description} onChange={(v:any) => setForm({...form, description: v})} placeholder="Holiday Special" />
+          </div>
+          <div className="space-y-4">
+            <label className="text-[8px] font-bold uppercase text-stone-400 tracking-widest block">Promo Visual</label>
+            <div className="aspect-video bg-stone-50 rounded-xl border-2 border-dashed border-stone-100 relative overflow-hidden flex items-center justify-center group">
+              {form.imageUrl ? (
+                <img src={form.imageUrl} className="w-full h-full object-cover" />
+              ) : (
+                <div className="text-center">
+                  <ImageIcon className="mx-auto text-stone-200 mb-1" size={24} />
+                  <span className="text-[7px] text-stone-300 font-bold uppercase">Upload Banner</span>
+                </div>
+              )}
+              <input type="file" onChange={handleImage} className="absolute inset-0 opacity-0 cursor-pointer" />
+            </div>
+            <button disabled={saving} className="w-full py-4 bg-stone-900 text-white rounded-xl font-bold uppercase tracking-widest text-[9px] hover:bg-stone-800 shadow-lg">
+              {saving ? <Loader2 size={14} className="animate-spin mx-auto" /> : 'Deploy Promo'}
+            </button>
+          </div>
+        </form>
+        <div className="space-y-3 pt-6 border-t border-stone-50">
+          <h4 className="text-[8px] font-bold uppercase text-stone-400 tracking-widest">Active Promos</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {promotions.map(p => (
+              <div key={p.id} className="p-3 bg-stone-50 rounded-xl flex items-center gap-3 border border-stone-100">
+                {p.imageUrl && <img src={p.imageUrl} className="w-8 h-8 rounded-lg object-cover" />}
+                <div className="flex-grow">
+                  <span className="font-mono font-bold text-orange-600 text-[10px]">{p.code}</span>
+                  <p className="text-[7px] text-stone-400 font-bold uppercase">{p.value}% OFF</p>
+                </div>
+                <button onClick={() => deleteDoc(doc(db, 'promotions', p.id))} className="text-stone-200 hover:text-red-500"><Trash2 size={14} /></button>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const StoreSettingsManager = ({ settings }: { settings: StoreSettings | null }) => {
+  const [text, setText] = useState(settings?.tickerText || '');
+  const [saving, setSaving] = useState(false);
+
+  const saveSettings = async () => {
+    setSaving(true);
+    try {
+      await setDoc(doc(db, 'settings', 'store_config'), { tickerText: text, isTickerActive: true }, { merge: true });
+      alert("Storefront updated.");
+    } catch (e) { alert("Error saving settings"); }
+    setSaving(false);
+  };
+
+  return (
+    <div className="max-w-xl">
+      <div className="bg-stone-900 rounded-2xl p-8 text-white shadow-xl space-y-6">
+        <h3 className="text-lg font-serif font-bold uppercase">Announcement Ticker</h3>
+        <textarea 
+          value={text} onChange={e => setText(e.target.value)}
+          className="w-full h-32 bg-stone-800 border border-stone-700 rounded-xl p-4 text-xs font-bold text-white outline-none focus:border-orange-500"
+          placeholder="New arrivals coming soon..."
+        />
+        <button onClick={saveSettings} disabled={saving} className="w-full py-4 bg-white text-stone-900 rounded-xl font-bold uppercase tracking-widest text-[9px] hover:bg-orange-400 hover:text-white transition-all">
+          {saving ? <Loader2 size={14} className="animate-spin mx-auto" /> : 'Publish to Live'}
+        </button>
+      </div>
     </div>
   );
 };
@@ -222,7 +271,6 @@ const ProductForm = ({ product, onClose }: { product: Product | null, onClose: (
   const [variants, setVariants] = useState<Partial<ProductVariant>[]>(product?.variants || []);
   const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
   const [newColor, setNewColor] = useState({ name: '', hex: '#1a1a1a' });
-
   const [form, setForm] = useState({
     name: product?.name || '',
     description: product?.description || '',
@@ -237,295 +285,157 @@ const ProductForm = ({ product, onClose }: { product: Product | null, onClose: (
     try {
       const url = await uploadToCloudinary(e.target.files[0]);
       setImages(prev => [...prev, url]);
-    } catch (err) {
-      alert("Image upload failed");
-    } finally {
-      setLoading(false);
-    }
+    } catch (e) { alert("Upload error"); }
+    setLoading(false);
   };
 
   const generateVariants = () => {
-    if (!newColor.name || selectedSizes.length === 0) {
-      alert("Please enter a color name and select at least one size.");
+    if (!newColor.name) {
+      alert("Name your colorway first.");
       return;
     }
 
-    const newBatch = selectedSizes.map(size => ({
-      id: `v-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
-      sku: `${form.name.slice(0, 3).toUpperCase()}-${newColor.name.slice(0, 3).toUpperCase()}-${size}`,
+    const sizesToAdd = selectedSizes.length > 0 ? selectedSizes : ['No Size'];
+
+    const newBatch = sizesToAdd.map(size => ({
+      id: `v-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+      sku: `${form.name.slice(0, 2).toUpperCase()}-${newColor.name.slice(0, 2).toUpperCase()}-${size.slice(0, 2).toUpperCase()}`,
       colorName: newColor.name,
       hexColor: newColor.hex,
-      size: size,
+      size: size === 'No Size' ? undefined : size,
       price: form.basePrice,
       stock: 0,
-      isComingSoon: false,
-      leadTime: ''
+      leadTime: '',
+      isComingSoon: false
     }));
 
-    setVariants([...variants, ...newBatch]);
-    // Reset generator for the next color
+    setVariants(prev => [...prev, ...newBatch]);
     setSelectedSizes([]);
     setNewColor({ name: '', hex: '#1a1a1a' });
   };
 
-  const updateVariant = (idx: number, updates: Partial<ProductVariant>) => {
-    setVariants(prev => prev.map((v, i) => i === idx ? { ...v, ...updates } : v));
-  };
-
-  const groupedVariants = useMemo(() => {
-    const groups: Record<string, Partial<ProductVariant>[]> = {};
+  const groupedVariants = useMemo<Record<string, any[]>>(() => {
+    const groups: Record<string, any[]> = {};
     variants.forEach((v, idx) => {
       const colorKey = v.colorName || 'Default';
       if (!groups[colorKey]) groups[colorKey] = [];
-      groups[colorKey].push({ ...v, originalIndex: idx } as any);
+      groups[colorKey].push({ ...v, originalIndex: idx });
     });
     return groups;
   }, [variants]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (images.length === 0) return alert("Please upload at least one image.");
+    if (images.length === 0) return alert("Add at least one photo.");
+    if (variants.length === 0) return alert("Add at least one colorway.");
+    
     setLoading(true);
     try {
-      const payload = { ...form, images, variants };
-      if (product) {
-        await updateDoc(doc(db, 'products', product.id), payload);
-      } else {
-        await addDoc(collection(db, 'products'), payload);
-      }
+      if (product) await updateDoc(doc(db, 'products', product.id), { ...form, images, variants });
+      else await addDoc(collection(db, 'products'), { ...form, images, variants });
       onClose();
-    } catch (err) {
-      alert("Failed to save product.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const toggleSize = (size: string) => {
-    setSelectedSizes(prev => prev.includes(size) ? prev.filter(s => s !== size) : [...prev, size]);
+    } catch (e) { alert("Save error"); }
+    setLoading(false);
   };
 
   return (
     <div className="fixed inset-0 z-[1001] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-stone-950/80 backdrop-blur-md" onClick={onClose} />
-      <div className="relative w-full max-w-6xl bg-white rounded-[2.5rem] shadow-2xl max-h-[90vh] overflow-y-auto flex flex-col animate-in zoom-in-95 duration-300">
-        <header className="p-8 border-b border-stone-100 flex justify-between items-center sticky top-0 bg-white z-10">
+      <div className="absolute inset-0 bg-stone-950/70 backdrop-blur-md" onClick={onClose} />
+      <div className="relative w-full max-w-5xl bg-white rounded-3xl shadow-2xl max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-200">
+        <header className="p-6 border-b border-stone-50 flex justify-between items-center sticky top-0 bg-white z-10">
           <div>
-            <h3 className="text-2xl font-serif font-bold">{product ? 'Edit Product' : 'New Collection Item'}</h3>
-            <p className="text-[10px] text-stone-400 font-bold uppercase tracking-widest mt-1">Easily add multiple colors and sizes for each garment.</p>
+            <h3 className="text-xl font-serif font-bold text-stone-900 uppercase tracking-tighter">{product ? 'Edit Item' : 'Create Piece'}</h3>
+            <p className="text-[7px] text-stone-400 font-bold uppercase tracking-widest mt-0.5">Iterative Piece Builder.</p>
           </div>
-          <button onClick={onClose} className="p-2 text-stone-400 hover:text-stone-900 transition-colors"><X size={24} /></button>
+          <button onClick={onClose} className="p-2 text-stone-300 hover:text-stone-900 transition-colors"><X size={20} /></button>
         </header>
         
-        <form onSubmit={handleSubmit} className="p-8 space-y-12">
-          {/* Section 1: Basic Info & Images */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-            <div className="space-y-8">
-              <Input label="Product Name" value={form.name} onChange={(v:any) => setForm({...form, name: v})} placeholder="e.g. Linen Wrap Dress" />
-              <div className="grid grid-cols-2 gap-6">
+        <form onSubmit={handleSubmit} className="p-8 space-y-10 pb-24">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="space-y-6">
+              <Input label="Name" value={form.name} onChange={(v:any) => setForm({...form, name: v})} placeholder="Woven Tote" />
+              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold uppercase text-stone-400 tracking-widest block">Category</label>
-                  <select 
-                    className="w-full p-4 bg-stone-50 border border-stone-200 rounded-2xl outline-none focus:border-stone-900 transition-all font-bold text-stone-900"
-                    value={form.categoryId}
-                    onChange={e => setForm({...form, categoryId: e.target.value})}
-                  >
+                  <label className="text-[8px] font-bold uppercase text-stone-400 block tracking-widest">Category</label>
+                  <select className="w-full p-3 bg-stone-50 border border-stone-100 rounded-xl outline-none font-bold text-xs" value={form.categoryId} onChange={e => setForm({...form, categoryId: e.target.value})}>
                     {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
                 </div>
-                <Input label="Global Base Price (GH₵)" type="number" value={form.basePrice} onChange={(v:any) => setForm({...form, basePrice: parseInt(v) || 0})} />
+                <Input label="Base Price" type="number" value={form.basePrice} onChange={(v:any) => setForm({...form, basePrice: parseInt(v) || 0})} />
               </div>
               <div className="space-y-2">
-                <label className="text-[10px] font-bold uppercase text-stone-400 tracking-widest block">Description</label>
-                <textarea 
-                  className="w-full h-32 p-6 bg-stone-50 border border-stone-200 rounded-[2rem] outline-none focus:border-stone-900 transition-all font-bold text-stone-900 resize-none"
-                  placeholder="The story behind this piece..."
-                  value={form.description}
-                  onChange={e => setForm({...form, description: e.target.value})}
-                />
+                <label className="text-[8px] font-bold uppercase text-stone-400 block tracking-widest">Description</label>
+                <textarea className="w-full h-24 p-4 bg-stone-50 border border-stone-100 rounded-xl outline-none font-bold text-xs resize-none" placeholder="Details..." value={form.description} onChange={e => setForm({...form, description: e.target.value})} />
               </div>
             </div>
 
-            <div className="space-y-6">
-              <label className="text-[10px] font-bold uppercase text-stone-400 tracking-widest block">Product Gallery</label>
-              <div className="grid grid-cols-3 gap-4">
-                {images.map((img, idx) => (
-                  <div key={idx} className="relative aspect-[3/4] rounded-2xl overflow-hidden group border border-stone-100">
-                    <img src={optimizeImage(img, 400)} className="w-full h-full object-cover" />
-                    <button type="button" onClick={() => setImages(images.filter((_, i) => i !== idx))} className="absolute top-2 right-2 p-2 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg">
-                      <Trash2 size={12} />
+            <div className="space-y-3">
+              <label className="text-[8px] font-bold uppercase text-stone-400 block tracking-widest">Gallery</label>
+              <div className="grid grid-cols-3 gap-2">
+                {images.map((img, i) => (
+                  <div key={i} className="aspect-[4/5] rounded-xl overflow-hidden relative group">
+                    <img src={img} className="w-full h-full object-cover" />
+                    <button type="button" onClick={() => setImages(images.filter((_, idx) => idx !== i))} className="absolute inset-0 bg-red-600/80 text-white opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all">
+                      <Trash2 size={16} />
                     </button>
                   </div>
                 ))}
-                <label className="aspect-[3/4] bg-stone-50 border-2 border-dashed border-stone-200 rounded-2xl flex flex-col items-center justify-center cursor-pointer hover:border-stone-400 transition-all group">
-                  <Plus size={24} className="text-stone-300 mb-2 group-hover:scale-125 transition-transform" />
-                  <span className="text-[8px] font-bold uppercase text-stone-400">Add Photo</span>
+                <label className="aspect-[4/5] bg-stone-50 border border-dashed border-stone-200 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:border-stone-900 transition-all">
+                  <Plus size={18} className="text-stone-300 mb-1" />
+                  <span className="text-[7px] font-bold text-stone-400 uppercase">Upload</span>
                   <input type="file" className="hidden" onChange={handleImageUpload} />
                 </label>
               </div>
             </div>
           </div>
 
-          {/* Section 2: Variant Generator (For Adding Multiple Colors) */}
-          <div className="bg-stone-900 rounded-[3rem] p-10 text-white space-y-8 shadow-2xl relative overflow-hidden">
-            <div className="absolute top-0 right-0 p-12 opacity-5 pointer-events-none">
-              <Palette size={120} />
-            </div>
-            
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center shadow-lg shadow-orange-500/20">
-                <Plus size={20} />
-              </div>
-              <div>
-                <h4 className="text-xl font-serif font-bold">Add Colorway & Sizes</h4>
-                <p className="text-[10px] font-bold text-stone-500 uppercase tracking-widest mt-1">You can add multiple colors by repeating this step.</p>
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-12 relative z-10">
-              <div className="space-y-6">
-                <div className="space-y-3">
-                  <label className="text-[9px] font-bold uppercase text-stone-500 tracking-[0.2em] block">1. Identify Color</label>
-                  <input 
-                    type="text" 
-                    value={newColor.name} 
-                    onChange={e => setNewColor({...newColor, name: e.target.value})} 
-                    placeholder="e.g. Royal Blue"
-                    className="w-full bg-stone-800 border border-stone-700 rounded-2xl px-5 py-4 text-sm font-bold text-white outline-none focus:border-orange-500 transition-all shadow-inner"
-                  />
-                  <div className="flex items-center gap-4 mt-4">
-                    <input 
-                      type="color" 
-                      className="w-14 h-14 rounded-2xl cursor-pointer bg-transparent border-none" 
-                      value={newColor.hex} 
-                      onChange={e => setNewColor({...newColor, hex: e.target.value})} 
-                    />
-                    <div className="flex flex-col">
-                      <span className="text-[10px] font-bold text-stone-500 uppercase tracking-widest">Selected Hex</span>
-                      <span className="text-xs font-mono text-white">{newColor.hex.toUpperCase()}</span>
-                    </div>
-                  </div>
+          <div className="bg-stone-900 rounded-2xl p-6 text-white space-y-6 shadow-xl">
+             <div className="flex items-center gap-3">
+                <Palette className="text-orange-500" size={20} />
+                <h4 className="text-sm font-serif font-bold uppercase tracking-tight">Colorway Batcher</h4>
+             </div>
+             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
+                <div className="space-y-4">
+                   <Input label="Name" value={newColor.name} onChange={v => setNewColor({...newColor, name: v})} placeholder="Midnight" />
+                   <div className="flex items-center gap-3">
+                      <input type="color" className="w-8 h-8 rounded-lg bg-transparent cursor-pointer border-none p-0 overflow-hidden" value={newColor.hex} onChange={e => setNewColor({...newColor, hex: e.target.value})} />
+                      <span className="text-[10px] font-mono opacity-50 uppercase tracking-widest">{newColor.hex}</span>
+                   </div>
                 </div>
-              </div>
-
-              <div className="space-y-6">
-                <div className="space-y-3">
-                  <label className="text-[9px] font-bold uppercase text-stone-500 tracking-[0.2em] block">2. Select Availability</label>
-                  <div className="flex flex-wrap gap-2">
-                    {STANDARD_SIZES.map(size => (
-                      <button 
-                        key={size} type="button" 
-                        onClick={() => toggleSize(size)}
-                        className={`px-5 py-3 rounded-xl text-xs font-bold border-2 transition-all ${selectedSizes.includes(size) ? 'bg-orange-500 text-white border-orange-500 shadow-lg shadow-orange-500/20' : 'bg-stone-800 text-stone-400 border-stone-700 hover:border-stone-500'}`}
-                      >
-                        {size}
-                      </button>
-                    ))}
-                  </div>
+                <div className="space-y-2">
+                   <label className="text-[8px] font-bold uppercase text-stone-500 block tracking-widest">Sizes (Optional)</label>
+                   <div className="flex flex-wrap gap-1.5">
+                      {STANDARD_SIZES.map(s => (
+                        <button key={s} type="button" onClick={() => setSelectedSizes(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s])} className={`px-3 py-1.5 rounded-lg text-[9px] font-bold border transition-all ${selectedSizes.includes(s) ? 'bg-orange-600 text-white border-orange-600' : 'bg-stone-800 text-stone-500 border-stone-700'}`}>{s}</button>
+                      ))}
+                   </div>
                 </div>
-              </div>
-
-              <div className="flex flex-col justify-end">
-                <button 
-                  type="button" 
-                  onClick={generateVariants}
-                  disabled={!newColor.name || selectedSizes.length === 0}
-                  className="w-full py-5 bg-white text-stone-900 rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-orange-500 hover:text-white transition-all shadow-xl disabled:opacity-20 disabled:cursor-not-allowed group"
-                >
-                  <span className="flex items-center justify-center gap-3">
-                    <Check size={16} className="opacity-0 group-hover:opacity-100 transition-opacity" />
-                    Add {selectedSizes.length} Variants to List
-                  </span>
-                </button>
-              </div>
-            </div>
+                <button type="button" onClick={generateVariants} disabled={!newColor.name} className="w-full py-3 bg-white text-stone-900 rounded-xl font-bold uppercase text-[9px] tracking-widest hover:bg-orange-600 hover:text-white transition-all disabled:opacity-20">Append Colorway</button>
+             </div>
           </div>
 
-          {/* Section 3: Defined Variants (Grouped by Color) */}
-          <div className="space-y-8">
-            <div className="flex justify-between items-end border-b border-stone-100 pb-4">
-              <div>
-                <h4 className="text-2xl font-serif font-bold text-stone-900">Catalogue Breakdown ({variants.length})</h4>
-                <p className="text-[10px] font-bold uppercase text-stone-400 tracking-widest mt-1">Review colors, adjust stock, or set pre-order lead times.</p>
-              </div>
-              {variants.length > 0 && (
-                <button type="button" onClick={() => setVariants([])} className="text-[10px] font-bold text-red-400 hover:text-red-600 transition-colors uppercase tracking-widest">Remove All Variants</button>
-              )}
-            </div>
-
+          <div className="space-y-6">
+            <h4 className="text-sm font-serif font-bold text-stone-900 pb-2 border-b border-stone-50 uppercase tracking-tight">Piece Inventory</h4>
             {Object.keys(groupedVariants).length === 0 ? (
-              <div className="py-24 bg-stone-50 rounded-[3rem] border border-dashed border-stone-200 flex flex-col items-center justify-center text-stone-400">
-                <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-sm mb-6">
-                  <Layers size={32} strokeWidth={1} />
-                </div>
-                <p className="font-bold text-stone-900 mb-1">List is currently empty.</p>
-                <p className="text-[10px] uppercase font-bold tracking-[0.2em] opacity-60">Add your first color using the generator above.</p>
-              </div>
+              <p className="text-[8px] text-stone-300 uppercase tracking-widest text-center py-10">Use Batcher to add variants.</p>
             ) : (
-              <div className="space-y-12">
-                {Object.entries(groupedVariants).map(([colorName, colorVariants]) => (
-                  <div key={colorName} className="space-y-6 animate-in slide-in-from-left duration-500">
-                    <div className="flex items-center gap-4">
-                      <div className="w-6 h-6 rounded-lg border border-stone-200 shadow-sm" style={{ backgroundColor: (colorVariants[0] as any).hexColor }} />
-                      <h5 className="font-serif font-bold text-xl text-stone-900">{colorName}</h5>
-                      <span className="px-3 py-1 bg-stone-100 rounded-full text-[9px] font-bold uppercase text-stone-500 tracking-widest">{colorVariants.length} Sizes</span>
+              <div className="space-y-8">
+                {(Object.entries(groupedVariants) as [string, any[]][]).map(([color, colorVariants]) => (
+                  <div key={color} className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 rounded-full" style={{ backgroundColor: colorVariants[0].hexColor }} />
+                      <h5 className="font-bold text-[10px] uppercase text-stone-900 tracking-widest">{color}</h5>
                     </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
                       {colorVariants.map((v: any) => (
-                        <div key={v.id} className="bg-white p-6 rounded-[2rem] border border-stone-100 shadow-sm hover:shadow-md transition-shadow relative group/card">
-                          <div className="flex justify-between items-start mb-6">
-                            <div>
-                              <span className="text-[10px] font-bold text-stone-400 uppercase tracking-widest">Size</span>
-                              <p className="text-2xl font-bold text-stone-900">{v.size}</p>
-                            </div>
-                            <button 
-                              type="button" 
-                              onClick={() => setVariants(variants.filter((_, i) => i !== v.originalIndex))} 
-                              className="p-2 text-stone-200 hover:text-red-500 transition-colors"
-                            >
-                              <Trash2 size={16} />
-                            </button>
+                        <div key={v.id} className="p-4 bg-stone-50 rounded-xl border border-stone-100 relative group">
+                          <div className="flex justify-between items-start mb-3">
+                            <span className="text-[14px] font-bold text-stone-900">{v.size || 'STD'}</span>
+                            <button type="button" onClick={() => setVariants(variants.filter((_, i) => i !== v.originalIndex))} className="text-stone-200 hover:text-red-500 transition-colors"><Trash2 size={12} /></button>
                           </div>
-
-                          <div className="space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
-                              <div className="space-y-1.5">
-                                <label className="text-[9px] font-bold uppercase text-stone-400 tracking-widest">Current Stock</label>
-                                <input 
-                                  type="number" 
-                                  className="w-full p-3 bg-stone-50 border border-stone-100 rounded-xl text-xs font-bold outline-none focus:border-stone-900 transition-all" 
-                                  value={v.stock} 
-                                  onChange={e => updateVariant(v.originalIndex, {stock: parseInt(e.target.value) || 0})} 
-                                />
-                              </div>
-                              <div className="space-y-1.5">
-                                <label className="text-[9px] font-bold uppercase text-stone-400 tracking-widest">Price (GH₵)</label>
-                                <input 
-                                  type="number" 
-                                  className="w-full p-3 bg-stone-50 border border-stone-100 rounded-xl text-xs font-bold outline-none focus:border-stone-900 transition-all" 
-                                  value={v.price} 
-                                  onChange={e => updateVariant(v.originalIndex, {price: parseInt(e.target.value) || 0})} 
-                                />
-                              </div>
-                            </div>
-
-                            <div className="pt-4 border-t border-stone-50 space-y-3">
-                              <div className="flex items-center justify-between">
-                                <label className="text-[9px] font-bold uppercase text-stone-900 tracking-widest flex items-center gap-2">
-                                  <CalendarClock size={12} className="text-orange-500" /> Pre-order Settings
-                                </label>
-                                {v.leadTime && v.stock === 0 && (
-                                  <span className="flex items-center gap-1 text-[8px] font-bold text-orange-600 bg-orange-50 px-2 py-0.5 rounded uppercase">Active</span>
-                                )}
-                              </div>
-                              <input 
-                                className="w-full p-3 bg-stone-50 border border-stone-100 rounded-xl text-xs font-bold outline-none focus:border-stone-900 transition-all placeholder:text-stone-300" 
-                                placeholder="e.g. 7 days" 
-                                value={v.leadTime} 
-                                onChange={e => updateVariant(v.originalIndex, {leadTime: e.target.value})} 
-                              />
-                            </div>
+                          <div className="grid grid-cols-2 gap-2">
+                            <Input label="Stock" type="number" value={v.stock} onChange={val => updateVariant(v.originalIndex, { stock: parseInt(val) || 0 })} />
+                            <Input label="Price" type="number" value={v.price} onChange={val => updateVariant(v.originalIndex, { price: parseInt(val) || 0 })} />
                           </div>
                         </div>
                       ))}
@@ -536,70 +446,47 @@ const ProductForm = ({ product, onClose }: { product: Product | null, onClose: (
             )}
           </div>
 
-          {/* Form Actions */}
-          <div className="pt-12 border-t border-stone-100 flex flex-col md:flex-row justify-between items-center gap-6">
-            <div className="flex items-center gap-8">
-              <label className="flex items-center gap-3 cursor-pointer group">
-                <input 
-                  type="checkbox" 
-                  checked={form.isFeatured} 
-                  onChange={e => setForm({...form, isFeatured: e.target.checked})}
-                  className="w-6 h-6 rounded-lg border-2 border-stone-200 text-stone-900 focus:ring-stone-900 cursor-pointer"
-                />
-                <span className="text-[10px] font-bold uppercase text-stone-400 group-hover:text-stone-900 transition-colors tracking-widest">Pin to Homepage</span>
-              </label>
-            </div>
-            
-            <div className="flex gap-4 w-full md:w-auto">
-              <button type="button" onClick={onClose} className="px-10 py-5 font-bold text-stone-400 hover:text-stone-900 transition-all">Discard</button>
-              <button 
-                disabled={loading || images.length === 0}
-                className="flex-grow md:flex-grow-0 px-16 py-5 bg-stone-900 text-white rounded-2xl font-bold hover:bg-stone-800 disabled:opacity-50 shadow-2xl shadow-stone-900/20 transition-all flex items-center justify-center gap-3"
-              >
-                {loading ? <Loader2 className="animate-spin" size={20} /> : <><Save size={20} /> Deploy to Catalogue</>}
-              </button>
-            </div>
+          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-full max-w-lg px-4 flex gap-4 z-[2000]">
+            <button type="button" onClick={onClose} className="flex-grow py-4 bg-white border border-stone-100 rounded-xl font-bold text-[9px] text-stone-400 uppercase tracking-widest shadow-xl">Cancel</button>
+            <button disabled={loading || images.length === 0 || variants.length === 0} className="flex-[2] py-4 bg-stone-900 text-white rounded-xl font-bold text-[9px] uppercase tracking-widest shadow-xl hover:bg-stone-800 transition-all flex items-center justify-center gap-2">
+              {loading ? <Loader2 className="animate-spin" size={14} /> : <><Check size={14} /> Commit Changes</>}
+            </button>
           </div>
         </form>
       </div>
     </div>
   );
+
+  function updateVariant(idx: number, updates: Partial<ProductVariant>) {
+    setVariants(prev => prev.map((v, i) => i === idx ? { ...v, ...updates } : v));
+  }
 };
 
 const OrdersTable = ({ orders, updateStatus }: { orders: Order[], updateStatus: any }) => (
-  <div className="bg-white border border-stone-200 rounded-[2.5rem] overflow-hidden shadow-sm">
+  <div className="bg-white border border-stone-100 rounded-2xl overflow-hidden shadow-sm w-full">
     <div className="overflow-x-auto">
-      <table className="w-full text-left">
-        <thead>
-          <tr className="border-b border-stone-100 bg-stone-50/50">
-            <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-widest text-stone-400">Order ID</th>
-            <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-widest text-stone-400">Customer</th>
-            <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-widest text-stone-400">Amount</th>
-            <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-widest text-stone-400">Status</th>
-            <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-widest text-stone-400">Actions</th>
+      <table className="w-full text-left text-[10px]">
+        <thead className="bg-stone-50/50 border-b border-stone-50">
+          <tr>
+            <th className="px-6 py-4 font-bold uppercase tracking-widest text-stone-400">Ref</th>
+            <th className="px-6 py-4 font-bold uppercase tracking-widest text-stone-400">Customer</th>
+            <th className="px-6 py-4 font-bold uppercase tracking-widest text-stone-400">Amount</th>
+            <th className="px-6 py-4 font-bold uppercase tracking-widest text-stone-400">Status</th>
+            <th className="px-6 py-4 font-bold uppercase tracking-widest text-stone-400">Actions</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-stone-100">
+        <tbody className="divide-y divide-stone-50">
           {orders.map((order) => (
-            <tr key={order.id} className="hover:bg-stone-50/30 transition-colors">
-              <td className="px-8 py-6">
-                <span className="font-mono text-xs font-bold text-stone-400">#{order.id.slice(-6).toUpperCase()}</span>
-                <p className="text-[10px] text-stone-300 mt-1">{new Date(order.createdAt).toLocaleDateString()}</p>
+            <tr key={order.id} className="hover:bg-stone-50/20 transition-colors">
+              <td className="px-6 py-4 font-mono font-bold text-stone-300">#{order.id.slice(-6).toUpperCase()}</td>
+              <td className="px-6 py-4">
+                <p className="font-bold text-stone-900">{order.customerName}</p>
+                <p className="text-[8px] opacity-40 uppercase">{order.customerPhone}</p>
               </td>
-              <td className="px-8 py-6">
-                <p className="font-bold text-stone-900 text-sm">{order.customerName}</p>
-                <p className="text-[10px] text-stone-400 mt-1">{order.customerPhone}</p>
-              </td>
-              <td className="px-8 py-6 font-bold text-stone-900">GH₵ {order.totalAmount.toLocaleString()}</td>
-              <td className="px-8 py-6">
-                <StatusBadge status={order.status} />
-              </td>
-              <td className="px-8 py-6">
-                <select 
-                  className="bg-stone-50 border border-stone-200 rounded-lg px-3 py-1.5 text-[10px] font-bold outline-none focus:border-stone-900 transition-all"
-                  value={order.status}
-                  onChange={(e) => updateStatus(order.id, e.target.value as OrderStatus)}
-                >
+              <td className="px-6 py-4 font-bold">GH₵ {order.totalAmount.toLocaleString()}</td>
+              <td className="px-6 py-4"><StatusBadge status={order.status} /></td>
+              <td className="px-6 py-4">
+                <select className="bg-stone-50 border border-stone-50 rounded px-2 py-1 outline-none text-[8px] font-bold uppercase" value={order.status} onChange={(e) => updateStatus(order.id, e.target.value as OrderStatus)}>
                   {Object.values(OrderStatus).map(s => <option key={s} value={s}>{s.replace('_', ' ')}</option>)}
                 </select>
               </td>
@@ -613,15 +500,17 @@ const OrdersTable = ({ orders, updateStatus }: { orders: Order[], updateStatus: 
 
 const StatCard = ({ icon, label, value, color }: any) => {
   const colors = {
-    orange: 'bg-orange-50 text-orange-600 border-orange-100',
-    blue: 'bg-blue-50 text-blue-600 border-blue-100',
-    stone: 'bg-stone-100 text-stone-600 border-stone-200'
+    orange: 'bg-orange-50 text-orange-600 border-orange-50',
+    blue: 'bg-blue-50 text-blue-600 border-blue-50',
+    stone: 'bg-stone-50 text-stone-600 border-stone-100'
   };
   return (
-    <div className={`p-8 rounded-[2.5rem] border ${colors[color as keyof typeof colors]} shadow-sm`}>
-      <div className="mb-4">{icon}</div>
-      <p className="text-[10px] font-bold uppercase tracking-widest opacity-60 mb-1">{label}</p>
-      <h3 className="text-3xl font-serif font-bold tracking-tight">{value}</h3>
+    <div className={`p-6 rounded-2xl border ${colors[color as keyof typeof colors]} flex items-center gap-4`}>
+      <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center shadow-sm">{icon}</div>
+      <div>
+        <p className="text-[7px] font-bold uppercase tracking-widest opacity-60 mb-0.5">{label}</p>
+        <h3 className="text-xl font-serif font-bold">{value}</h3>
+      </div>
     </div>
   );
 };
@@ -632,26 +521,16 @@ const StatusBadge = ({ status }: { status: OrderStatus }) => {
     [OrderStatus.PROCESSING]: 'bg-blue-50 text-blue-600',
     [OrderStatus.SHIPPED]: 'bg-indigo-50 text-indigo-600',
     [OrderStatus.DELIVERED]: 'bg-green-50 text-green-600',
-    [OrderStatus.CANCELLED]: 'bg-stone-50 text-stone-400',
+    [OrderStatus.CANCELLED]: 'bg-stone-50 text-stone-300',
     [OrderStatus.PENDING_PAYMENT]: 'bg-yellow-50 text-yellow-600'
   };
-  return (
-    <span className={`px-3 py-1.5 rounded-full text-[9px] font-bold uppercase tracking-widest ${styles[status]}`}>
-      {status.replace('_', ' ')}
-    </span>
-  );
+  return <span className={`px-2 py-1 rounded text-[7px] font-bold uppercase tracking-widest ${styles[status]}`}>{status.replace('_', ' ')}</span>;
 };
 
 const Input = ({ label, value, onChange, placeholder, type = 'text' }: any) => (
-  <div className="space-y-2">
-    <label className="text-[10px] font-bold uppercase text-stone-400 tracking-widest block">{label}</label>
-    <input 
-      type={type} 
-      value={value} 
-      onChange={e => onChange(e.target.value)}
-      placeholder={placeholder}
-      className="w-full p-4 bg-stone-50 border border-stone-200 rounded-2xl outline-none focus:border-stone-900 transition-all font-bold text-stone-900 placeholder:text-stone-200 shadow-inner"
-    />
+  <div className="space-y-1.5">
+    <label className="text-[7px] font-bold uppercase text-stone-400 tracking-widest block">{label}</label>
+    <input type={type} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} className="w-full p-3 bg-stone-50 border border-stone-100 rounded-xl outline-none font-bold text-stone-900 text-[11px] placeholder:text-stone-200 shadow-sm" />
   </div>
 );
 

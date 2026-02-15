@@ -10,13 +10,8 @@ interface NavbarProps {
   navigate?: (path: string) => void;
 }
 
-// Bug #4 Fix: detect environment once at module level.
-// If the `navigate` prop is provided (SPA/hash mode from App.tsx), use it.
-// Otherwise detect Next.js by checking for next/navigation availability and
-// use window.location.pathname so we don't pollute the URL with hash fragments.
 const isNextJs = (): boolean => {
   try {
-    // Next.js always injects __NEXT_DATA__ on the window object at runtime
     return typeof window !== 'undefined' && !!(window as any).__NEXT_DATA__;
   } catch {
     return false;
@@ -27,19 +22,13 @@ const Navbar: React.FC<NavbarProps> = ({ navigate }) => {
   const { user, profile, totalItems, setIsCartOpen, setIsAuthOpen } = useAppContext();
   const [isAdminGateOpen, setIsAdminGateOpen] = useState(false);
 
-  // Bug #4 Fix: unified navigation helper that works for both routing modes.
-  // - SPA (App.tsx): `navigate` prop is passed → use it (hash routing)
-  // - Next.js (app/ dir): no `navigate` prop → use pathname navigation
   const safeNavigate = (path: string) => {
     if (navigate) {
-      // Hash-based SPA routing
       navigate(path);
     } else if (isNextJs()) {
-      // Next.js: use standard pathname routing
       const target = path === 'store' ? '/' : `/${path}`;
       window.location.href = target;
     } else {
-      // Fallback: hash routing without a navigate prop
       window.location.hash = path === 'store' ? '' : path;
     }
   };
@@ -58,84 +47,85 @@ const Navbar: React.FC<NavbarProps> = ({ navigate }) => {
   };
 
   return (
-    <nav className="sticky top-0 z-[100] bg-white/80 backdrop-blur-md border-b border-stone-200">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
-          <button
-            onClick={() => safeNavigate('store')}
-            className="text-2xl font-bold tracking-tighter font-serif text-stone-900"
-          >
-            KAZI
+    <nav className="sticky top-0 z-[100] bg-white/90 backdrop-blur-md border-b border-stone-100 w-full h-14 flex items-center">
+      <div className="w-full px-4 md:px-10 flex justify-between items-center">
+        <button
+          onClick={() => safeNavigate('store')}
+          className="text-lg font-bold tracking-tighter font-serif text-stone-900"
+        >
+          J&B MARKET
+        </button>
+
+        <div className="hidden md:flex space-x-6 text-[8px] font-bold uppercase tracking-widest text-stone-400">
+          <button onClick={() => safeNavigate('store')} className="hover:text-stone-900 transition">
+            Store
           </button>
-
-          <div className="hidden md:flex space-x-8 text-sm font-medium text-stone-600">
-            <button onClick={() => safeNavigate('store')} className="hover:text-stone-900 transition">
-              Collection
-            </button>
-            {user && (
-              <button
-                onClick={() => safeNavigate('orders')}
-                className="hover:text-stone-900 transition flex items-center gap-2"
-              >
-                <Package size={14} /> My Orders
-              </button>
-            )}
-          </div>
-
-          <div className="flex items-center gap-1 md:gap-3">
-            {user ? (
-              <div className="flex items-center gap-1 md:gap-2">
-                <div className="hidden md:block mr-2 text-right">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-stone-400">
-                    {profile?.role === 'ADMIN' ? 'Principal' : 'Member'}
-                  </p>
-                  <p className="text-xs font-bold text-stone-900 line-clamp-1 max-w-[120px]">
-                    {profile?.fullName || user.displayName || 'Account'}
-                  </p>
-                </div>
-
-                {profile?.role === 'ADMIN' && (
-                  <button
-                    onClick={() => safeNavigate('admin')}
-                    className="p-2.5 rounded-full text-stone-600 hover:bg-stone-100 transition-all"
-                    title="Admin Dashboard"
-                  >
-                    <ShieldCheck size={20} className="text-orange-500" />
-                  </button>
-                )}
-
-                <button
-                  onClick={handleLogout}
-                  className="p-2.5 text-stone-600 hover:bg-stone-100 rounded-full transition-all"
-                  title="Sign Out"
-                >
-                  <LogOut size={20} />
-                </button>
-              </div>
-            ) : (
-              <button
-                onClick={() => setIsAuthOpen(true)}
-                className="flex items-center gap-2 px-4 py-2 text-stone-900 bg-stone-100 hover:bg-stone-200 rounded-full transition-all font-bold text-xs"
-              >
-                <UserIcon size={14} />
-                <span>Join / Login</span>
-              </button>
-            )}
-
-            <div className="w-px h-6 bg-stone-200 mx-1 md:mx-2" />
-
+          <button onClick={() => safeNavigate('momo-guide')} className="hover:text-stone-900 transition">
+            Payment Guide
+          </button>
+          {user && (
             <button
-              onClick={() => setIsCartOpen(true)}
-              className="relative p-2.5 text-stone-900 hover:bg-stone-100 rounded-full transition-all"
+              onClick={() => safeNavigate('orders')}
+              className="hover:text-stone-900 transition flex items-center gap-1.5"
             >
-              <ShoppingCart size={20} />
-              {totalItems > 0 && (
-                <span className="absolute -top-1 -right-1 h-5 w-5 bg-orange-600 text-white text-[10px] font-bold flex items-center justify-center rounded-full border-2 border-white">
-                  {totalItems}
-                </span>
-              )}
+              <Package size={10} /> Orders
             </button>
-          </div>
+          )}
+        </div>
+
+        <div className="flex items-center gap-2">
+          {user ? (
+            <div className="flex items-center gap-2">
+              <div className="hidden md:block text-right mr-1">
+                <p className="text-[6px] font-bold uppercase tracking-widest text-stone-400 leading-none">
+                  {profile?.role === 'ADMIN' ? 'Administrator' : 'Collector'}
+                </p>
+                <p className="text-[9px] font-bold text-stone-900 leading-tight">
+                  {profile?.fullName?.split(' ')[0] || 'User'}
+                </p>
+              </div>
+
+              {profile?.role === 'ADMIN' && (
+                <button
+                  onClick={() => safeNavigate('admin')}
+                  className="p-1.5 rounded-lg text-stone-500 hover:bg-stone-50 transition-all"
+                  title="Admin Dashboard"
+                >
+                  <ShieldCheck size={16} className="text-orange-500" />
+                </button>
+              )}
+
+              <button
+                onClick={handleLogout}
+                className="p-1.5 text-stone-500 hover:bg-stone-50 rounded-lg transition-all"
+                title="Logout"
+              >
+                <LogOut size={16} />
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setIsAuthOpen(true)}
+              className="flex items-center gap-1 px-2.5 py-1 text-stone-900 bg-stone-100 hover:bg-stone-200 rounded-lg transition-all font-bold text-[8px] uppercase tracking-widest"
+            >
+              <UserIcon size={10} />
+              <span>Login</span>
+            </button>
+          )}
+
+          <div className="w-px h-3 bg-stone-100 mx-1" />
+
+          <button
+            onClick={() => setIsCartOpen(true)}
+            className="relative p-1.5 text-stone-900 hover:bg-stone-100 rounded-lg transition-all"
+          >
+            <ShoppingCart size={16} />
+            {totalItems > 0 && (
+              <span className="absolute -top-1 -right-1 h-3.5 w-3.5 bg-orange-600 text-white text-[7px] font-bold flex items-center justify-center rounded-full border border-white">
+                {totalItems}
+              </span>
+            )}
+          </button>
         </div>
       </div>
 

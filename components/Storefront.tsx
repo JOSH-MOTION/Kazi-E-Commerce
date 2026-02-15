@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { ShoppingBag, Star, Clock, ShieldCheck, X, AlertTriangle, ChevronLeft, ChevronRight, Tag, CalendarClock, Zap } from 'lucide-react';
+import { ShoppingBag, Star, Clock, ShieldCheck, X, AlertTriangle, ChevronLeft, ChevronRight, Tag, CalendarClock, Zap, Ticket, Sparkle, Image as ImageIcon } from 'lucide-react';
 import { Product, ProductVariant } from '../types';
 import { optimizeImage } from '../cloudinary';
 import { useAppContext } from '../context/AppContext';
@@ -10,7 +10,7 @@ interface StorefrontProps {
 }
 
 const Storefront: React.FC<StorefrontProps> = ({ addToCart }) => {
-  const { products, categories, promotions } = useAppContext();
+  const { products, categories, settings, promotions } = useAppContext();
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [activeCategory, setActiveCategory] = useState<string>('all');
 
@@ -18,55 +18,86 @@ const Storefront: React.FC<StorefrontProps> = ({ addToCart }) => {
     ? products 
     : products.filter(p => p.categoryId === activeCategory);
 
+  const tickerMessage = settings?.tickerText || "J&B Market • Premium African Retail • Accra 2025";
+
   return (
-    <div className="max-w-7xl mx-auto pb-20">
-      {/* Promotion Ticker */}
-      {promotions.length > 0 && (
-        <div className="bg-orange-600 text-white overflow-hidden py-2.5">
-          <div className="flex animate-[scroll_30s_linear_infinite] whitespace-nowrap">
-            {[...promotions, ...promotions].map((promo, idx) => (
-              <span key={idx} className="inline-flex items-center gap-2 mx-12 text-[10px] font-bold uppercase tracking-[0.2em]">
-                <Tag size={12} /> Use code <span className="text-yellow-300 px-2 py-0.5 border border-white/20 rounded">{promo.code}</span> for {promo.type === 'PERCENT' ? `${promo.value}% OFF` : `GH₵${promo.value} OFF`} • {promo.description}
+    <div className="w-full pb-12">
+      {/* Dynamic Announcement Ticker - Full Width */}
+      {settings?.isTickerActive !== false && (
+        <div className="bg-stone-900 text-white overflow-hidden py-1.5 border-b border-white/5">
+          <div className="flex animate-[scroll_50s_linear_infinite] whitespace-nowrap">
+            {[1, 2, 3, 4, 5, 6, 7, 8].map((_, idx) => (
+              <span key={idx} className="inline-flex items-center gap-2.5 mx-6 text-[7px] font-bold uppercase tracking-[0.2em]">
+                <SparkleIcon /> {tickerMessage}
               </span>
             ))}
           </div>
         </div>
       )}
 
-      {/* Hero Section */}
-      <section className="relative h-[50vh] md:h-[70vh] flex items-center justify-center overflow-hidden bg-stone-900">
+      {/* Hero Section - Limitless Width */}
+      <section className="relative h-[25vh] md:h-[40vh] flex items-center justify-center overflow-hidden bg-stone-900 w-full">
         <img 
-          src="https://images.unsplash.com/photo-1523381210434-271e8be1f52b?auto=format&fit=crop&q=80&w=2000" 
-          className="absolute inset-0 w-full h-full object-cover opacity-60"
+          src="https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&q=80&w=2000" 
+          className="absolute inset-0 w-full h-full object-cover opacity-40"
           alt="Premium African Fashion"
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-stone-950/20 via-stone-950/40 to-stone-950/80" />
-        <div className="relative z-10 text-center px-4 max-w-3xl animate-fade-in">
-          <span className="text-orange-400 font-bold tracking-[0.4em] text-[10px] uppercase mb-6 block">Kazi Collection 2025 • Accra</span>
-          <h2 className="text-5xl md:text-7xl font-serif text-white mb-8 tracking-tight">Essence of the Hustle.</h2>
+        <div className="absolute inset-0 bg-gradient-to-b from-stone-950/20 via-stone-950/40 to-stone-950/90" />
+        <div className="relative z-10 text-center px-6 max-w-lg animate-fade-in">
+          <span className="text-orange-500 font-bold tracking-[0.4em] text-[7px] uppercase mb-2 block">Boutique Collective</span>
+          <h2 className="text-xl md:text-3xl font-serif text-white mb-4 tracking-tight leading-tight uppercase">Authentic Crafts. Refined Design.</h2>
           <button 
             onClick={() => document.getElementById('collection')?.scrollIntoView({ behavior: 'smooth' })}
-            className="bg-white text-stone-900 px-10 py-5 rounded-full font-bold hover:scale-105 transition-all shadow-2xl"
+            className="bg-white text-stone-900 px-6 py-2 rounded-full font-bold hover:scale-105 transition-all shadow-xl text-[8px] uppercase tracking-widest"
           >
-            Shop the Collection
+            Explore Catalogue
           </button>
         </div>
       </section>
 
-      {/* Category Filter */}
-      <section id="collection" className="px-4 py-12 flex justify-center sticky top-16 z-40 bg-[#fcfcf9]/90 backdrop-blur-md border-b border-stone-100">
-        <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
+      {/* Promotions Banner - Scaled down */}
+      {promotions.length > 0 && (
+        <section className="px-4 md:px-10 mt-6 w-full">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+            {promotions.map(p => (
+              <div key={p.id} className="bg-white border border-stone-100 rounded-xl overflow-hidden flex h-20 md:h-24 shadow-sm hover:shadow-md transition-shadow group">
+                <div className="w-1/4 bg-stone-50 shrink-0 overflow-hidden">
+                  {p.imageUrl ? (
+                    <img src={optimizeImage(p.imageUrl, 400)} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt={p.code} />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-stone-200">
+                      <ImageIcon size={16} />
+                    </div>
+                  )}
+                </div>
+                <div className="p-2 md:p-3 flex flex-col justify-center flex-grow">
+                  <div className="flex items-center justify-between mb-0.5">
+                    <span className="text-[6px] font-mono font-bold text-orange-600 bg-orange-50 px-1 py-0.5 rounded tracking-widest">{p.code}</span>
+                    <span className="text-[6px] font-bold uppercase text-stone-400">{p.value}% OFF</span>
+                  </div>
+                  <h4 className="text-[9px] font-bold text-stone-900 uppercase tracking-widest line-clamp-1">{p.description}</h4>
+                  <p className="text-[6px] text-stone-400 mt-0.5 uppercase tracking-widest">Limited Offer</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Category Filter - Sticky Full Width */}
+      <section id="collection" className="px-4 md:px-10 py-3 flex justify-center sticky top-14 z-40 bg-[#fcfcf9]/95 backdrop-blur-md border-b border-stone-100 mt-2 w-full">
+        <div className="flex gap-1.5 overflow-x-auto pb-0.5 scrollbar-hide">
           <button 
             onClick={() => setActiveCategory('all')}
-            className={`whitespace-nowrap px-8 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest border transition-all ${activeCategory === 'all' ? 'bg-stone-900 text-white border-stone-900 shadow-lg shadow-stone-900/20' : 'bg-white text-stone-500 border-stone-200 hover:border-stone-400'}`}
+            className={`whitespace-nowrap px-4 py-1.5 rounded-full text-[7px] font-bold uppercase tracking-widest border transition-all ${activeCategory === 'all' ? 'bg-stone-900 text-white border-stone-900 shadow-md' : 'bg-white text-stone-400 border-stone-100 hover:border-stone-300'}`}
           >
-            All Items
+            All
           </button>
           {categories.map(cat => (
             <button 
               key={cat.id}
               onClick={() => setActiveCategory(cat.id)}
-              className={`whitespace-nowrap px-8 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest border transition-all ${activeCategory === cat.id ? 'bg-stone-900 text-white border-stone-900 shadow-lg shadow-stone-900/20' : 'bg-white text-stone-500 border-stone-200 hover:border-stone-400'}`}
+              className={`whitespace-nowrap px-4 py-1.5 rounded-full text-[7px] font-bold uppercase tracking-widest border transition-all ${activeCategory === cat.id ? 'bg-stone-900 text-white border-stone-900 shadow-md' : 'bg-white text-stone-400 border-stone-100 hover:border-stone-300'}`}
             >
               {cat.name}
             </button>
@@ -74,8 +105,8 @@ const Storefront: React.FC<StorefrontProps> = ({ addToCart }) => {
         </div>
       </section>
 
-      {/* Product Grid */}
-      <section className="px-4 mt-12 grid grid-cols-2 lg:grid-cols-3 gap-6 md:gap-12">
+      {/* Product Grid - Denser Full Width */}
+      <section className="px-4 md:px-10 mt-6 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 gap-3 md:gap-4 w-full">
         {filteredProducts.map(product => (
           <ProductCard key={product.id} product={product} onClick={() => setSelectedProduct(product)} />
         ))}
@@ -93,7 +124,13 @@ const Storefront: React.FC<StorefrontProps> = ({ addToCart }) => {
   );
 };
 
-const ProductCard = ({ product, onClick }: { product: Product, onClick: () => void }) => {
+const SparkleIcon = () => (
+  <svg width="6" height="6" viewBox="0 0 24 24" fill="currentColor" className="text-orange-500">
+    <path d="M12 0L14.59 9.41L24 12L14.59 14.59L12 24L9.41 14.59L0 12L9.41 9.41L12 0Z" />
+  </svg>
+);
+
+const ProductCard: React.FC<{ product: Product, onClick: () => void }> = ({ product, onClick }) => {
   const isComingSoon = product.variants?.every(v => v.isComingSoon) || false;
   const isOutOfStock = !isComingSoon && (product.variants?.every(v => v.stock === 0 && !v.leadTime) || false);
   const hasInStock = product.variants?.some(v => v.stock > 0 && !v.isComingSoon);
@@ -101,49 +138,28 @@ const ProductCard = ({ product, onClick }: { product: Product, onClick: () => vo
 
   return (
     <div 
-      className="group bg-white rounded-3xl overflow-hidden cursor-pointer transition-all duration-500 hover:shadow-[0_32px_64px_-16px_rgba(0,0,0,0.1)]"
+      className="group bg-white rounded-lg overflow-hidden cursor-pointer transition-all duration-300 border border-stone-100 hover:shadow-lg"
       onClick={onClick}
     >
-      <div className="relative aspect-[4/5] overflow-hidden bg-stone-100">
+      <div className="relative aspect-[3/4] md:aspect-[4/5] overflow-hidden bg-stone-50">
         <img 
-          src={optimizeImage(product.images[0], 600)} 
+          src={optimizeImage(product.images[0], 500)} 
           alt={product.name}
-          className="w-full h-full object-cover group-hover:scale-110 transition duration-700 ease-out"
+          className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
         />
-        
-        {/* Status Badges */}
-        <div className="absolute top-4 left-4 flex flex-col gap-2">
-          {isComingSoon && (
-            <span className="bg-stone-900 text-white text-[9px] font-bold px-3 py-1.5 rounded-full tracking-widest uppercase shadow-xl">Coming Soon</span>
-          )}
-          {hasInStock && (
-            <span className="bg-green-600 text-white text-[9px] font-bold px-3 py-1.5 rounded-full tracking-widest uppercase shadow-xl flex items-center gap-1.5">
-              <Zap size={10} fill="currentColor" /> Instant
-            </span>
-          )}
-          {hasPreOrder && !hasInStock && (
-            <span className="bg-orange-600 text-white text-[9px] font-bold px-3 py-1.5 rounded-full tracking-widest uppercase shadow-xl flex items-center gap-1.5">
-              <CalendarClock size={10} /> Pre-order
-            </span>
-          )}
-          {isOutOfStock && !hasPreOrder && !hasInStock && (
-            <span className="bg-stone-100 text-stone-500 text-[9px] font-bold px-3 py-1.5 rounded-full tracking-widest uppercase shadow-xl">Out of Stock</span>
-          )}
+        <div className="absolute top-2 left-2 flex flex-col gap-0.5">
+          {isComingSoon && <span className="bg-stone-900 text-white text-[5px] md:text-[6px] font-bold px-1 py-0.5 rounded tracking-widest uppercase">Soon</span>}
+          {hasInStock && <span className="bg-green-600 text-white text-[5px] md:text-[6px] font-bold px-1 py-0.5 rounded tracking-widest uppercase flex items-center gap-0.5 shadow-sm"><Zap size={5} fill="currentColor" /> Ready</span>}
+          {hasPreOrder && !hasInStock && <span className="bg-orange-600 text-white text-[5px] md:text-[6px] font-bold px-1 py-0.5 rounded tracking-widest uppercase flex items-center gap-0.5 shadow-sm"><CalendarClock size={5} /> Pre</span>}
         </div>
       </div>
-
-      <div className="p-6 md:p-8">
-        <div className="flex justify-between items-start mb-3">
-          <h3 className="font-serif font-bold text-stone-900 text-lg md:text-xl group-hover:text-orange-600 transition-colors">{product.name}</h3>
-        </div>
-        <div className="flex items-end justify-between">
-          <div>
-            <p className="text-[10px] text-stone-400 font-bold uppercase tracking-widest mb-1">Starting from</p>
-            <span className="font-bold text-stone-900 text-lg">GH₵ {product.basePrice.toLocaleString()}</span>
-          </div>
-          <div className="flex -space-x-1.5">
-            {Array.from(new Set(product.variants?.map(v => v.hexColor) || [])).map(color => (
-              <div key={color} className="w-4 h-4 rounded-full border-2 border-white ring-1 ring-stone-100 shadow-sm" style={{ backgroundColor: color }} />
+      <div className="p-2 md:p-2.5">
+        <h3 className="font-serif font-bold text-stone-900 text-[10px] md:text-[11px] group-hover:text-orange-600 transition-colors line-clamp-1">{product.name}</h3>
+        <div className="flex items-end justify-between mt-1">
+          <span className="font-bold text-stone-900 text-[9px] md:text-[10px]">GH₵ {product.basePrice.toLocaleString()}</span>
+          <div className="flex -space-x-1">
+            {Array.from(new Set(product.variants?.map(v => v.hexColor) || [])).slice(0, 3).map(color => (
+              <div key={color} className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full border border-white ring-1 ring-stone-100 shadow-sm" style={{ backgroundColor: color }} />
             ))}
           </div>
         </div>
@@ -158,155 +174,129 @@ const ProductModal = ({ product, onClose, addToCart }: any) => {
     product.variants?.find((v:any) => (v.stock > 0 || v.leadTime) && !v.isComingSoon) || product.variants?.[0]
   );
   const [activeImageIdx, setActiveImageIdx] = useState(0);
-  const [quantity, setQuantity] = useState(1);
 
   const colors = Array.from(new Set(product.variants?.map((v: any) => v.colorName) || [])).map(name => 
     product.variants?.find((v: any) => v.colorName === name)!
   );
-
   const sizesForColor = product.variants?.filter((v: any) => v.colorName === selectedVariant?.colorName) || [];
-
   const isInStock = selectedVariant?.stock > 0 && !selectedVariant?.isComingSoon;
   const isPreOrder = selectedVariant?.stock === 0 && !!selectedVariant?.leadTime && !selectedVariant?.isComingSoon;
   const canPurchase = isInStock || isPreOrder;
 
+  const nextImage = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setActiveImageIdx((prev) => (prev + 1) % product.images.length);
+  };
+  const prevImage = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setActiveImageIdx((prev) => (prev - 1 + product.images.length) % product.images.length);
+  };
+
   return (
     <div className="fixed inset-0 z-[1000] flex items-end sm:items-center justify-center overflow-hidden">
-      <div className="absolute inset-0 bg-stone-950/80 backdrop-blur-xl animate-in fade-in duration-500" onClick={onClose} />
-      
-      <div className="relative w-full max-w-6xl bg-white sm:rounded-[2.5rem] shadow-2xl overflow-hidden animate-in slide-in-from-bottom duration-700 ease-out">
-        <button onClick={onClose} className="absolute top-6 right-6 z-20 bg-white/80 backdrop-blur p-3 rounded-full text-stone-900 hover:bg-white transition-all shadow-lg"><X size={20} /></button>
-        
-        <div className="flex flex-col lg:flex-row max-h-[95vh] overflow-y-auto">
-          {/* Gallery Side */}
-          <div className="w-full lg:w-3/5 relative bg-stone-50 overflow-hidden group">
-            <div className="aspect-[4/5] lg:aspect-auto h-full w-full">
-              <img src={optimizeImage(product.images[activeImageIdx], 1200)} className="w-full h-full object-cover transition-all duration-700" alt={product.name} />
+      <div className="absolute inset-0 bg-stone-950/60 backdrop-blur-md animate-in fade-in" onClick={onClose} />
+      <div className="relative w-full max-w-3xl bg-white sm:rounded-xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom duration-300 mx-auto sm:my-8">
+        <button onClick={onClose} className="absolute top-3 right-3 z-40 bg-white/70 backdrop-blur-lg p-2 rounded-full text-stone-900 shadow-sm hover:bg-white transition-all"><X size={16} /></button>
+        <div className="flex flex-col lg:flex-row max-h-[85vh] lg:max-h-[75vh] overflow-y-auto">
+          {/* Gallery Section */}
+          <div className="w-full lg:w-1/2 relative bg-stone-50 overflow-hidden group/gallery">
+            <div className="aspect-[1/1] sm:aspect-[4/5] w-full max-h-[40vh] md:max-h-none overflow-hidden flex items-center justify-center bg-stone-50">
+              <img 
+                src={optimizeImage(product.images[activeImageIdx], 800)} 
+                className="w-full h-full object-contain transition-all duration-500" 
+                alt={product.name} 
+              />
             </div>
             
             {product.images.length > 1 && (
               <>
-                <div className="absolute inset-y-0 left-0 w-24 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button onClick={() => setActiveImageIdx(prev => (prev === 0 ? product.images.length - 1 : prev - 1))} className="p-3 bg-white/80 backdrop-blur rounded-full text-stone-900 shadow-xl hover:bg-white"><ChevronLeft size={24} /></button>
-                </div>
-                <div className="absolute inset-y-0 right-0 w-24 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button onClick={() => setActiveImageIdx(prev => (prev === product.images.length - 1 ? 0 : prev + 1))} className="p-3 bg-white/80 backdrop-blur rounded-full text-stone-900 shadow-xl hover:bg-white"><ChevronRight size={24} /></button>
-                </div>
-                <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex gap-2">
-                  {product.images.map((_:any, idx:number) => (
-                    <button key={idx} onClick={() => setActiveImageIdx(idx)} className={`w-2 h-2 rounded-full transition-all ${idx === activeImageIdx ? 'bg-stone-900 w-6' : 'bg-stone-300 hover:bg-stone-400'}`} />
+                {/* Fixed Navigation Arrows - Prominent on Mobile */}
+                <button 
+                  onClick={prevImage}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/90 backdrop-blur border border-stone-200 flex items-center justify-center text-stone-900 shadow-lg z-20 hover:scale-110 active:scale-95 transition-all"
+                >
+                  <ChevronLeft size={20} />
+                </button>
+                <button 
+                  onClick={nextImage}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/90 backdrop-blur border border-stone-200 flex items-center justify-center text-stone-900 shadow-lg z-20 hover:scale-110 active:scale-95 transition-all"
+                >
+                  <ChevronRight size={20} />
+                </button>
+
+                {/* Indicators - Larger Touch Area */}
+                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-3 px-4 py-2 rounded-full bg-white/40 backdrop-blur-md z-20 border border-white/50">
+                  {product.images.map((_:any, i:number) => (
+                    <button 
+                      key={i} 
+                      onClick={(e) => { e.stopPropagation(); setActiveImageIdx(i); }} 
+                      className={`h-2 rounded-full transition-all ${i === activeImageIdx ? 'bg-stone-900 w-5' : 'bg-stone-400 w-2 hover:bg-stone-600'}`} 
+                    />
                   ))}
                 </div>
               </>
             )}
           </div>
 
-          {/* Details Side */}
-          <div className="w-full lg:w-2/5 p-8 md:p-12 lg:p-16 flex flex-col bg-white">
-            <nav className="mb-6">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-stone-400">
-                {categories.find(c => c.id === product.categoryId)?.name || 'Collection'}
-              </span>
-            </nav>
-
-            <h2 className="text-4xl lg:text-5xl font-serif font-bold text-stone-900 mb-4">{product.name}</h2>
-            <div className="flex flex-wrap items-center gap-4 mb-8">
-              <p className="text-3xl font-bold text-stone-900">GH₵ {selectedVariant?.price.toLocaleString() || product.basePrice.toLocaleString()}</p>
-              
-              {selectedVariant?.isComingSoon && <span className="text-stone-500 font-bold uppercase tracking-widest text-[10px] bg-stone-100 px-3 py-1 rounded-full">Coming Soon</span>}
-              
-              {isInStock && (
-                <div className="flex items-center gap-2 bg-green-50 text-green-700 px-3 py-1 rounded-full border border-green-200">
-                  <Zap size={12} fill="currentColor" />
-                  <span className="text-[10px] font-bold uppercase tracking-widest">In Stock & Ready</span>
+          {/* Details Section */}
+          <div className="w-full lg:w-1/2 p-6 md:p-8 flex flex-col bg-white">
+            <span className="text-[7px] font-bold uppercase tracking-widest text-stone-400 mb-1">{categories.find(c => c.id === product.categoryId)?.name}</span>
+            <h2 className="text-xl md:text-2xl font-serif font-bold text-stone-900 mb-2 uppercase tracking-tight">{product.name}</h2>
+            <div className="flex items-center gap-3 mb-5">
+              <p className="text-lg md:text-xl font-bold text-stone-900">GH₵ {selectedVariant?.price.toLocaleString()}</p>
+              {isPreOrder && <span className="bg-orange-50 text-orange-700 text-[7px] font-bold px-2 py-1 rounded-full uppercase tracking-widest border border-orange-100">Ships in {selectedVariant.leadTime}</span>}
+            </div>
+            <p className="text-stone-500 text-[11px] leading-relaxed mb-6 font-medium tracking-wide">{product.description}</p>
+            
+            <div className="space-y-6 mb-8">
+              {colors.length > 0 && (
+                <div>
+                  <label className="text-[7px] font-bold uppercase text-stone-400 block mb-2 tracking-widest">Colorway: {selectedVariant?.colorName}</label>
+                  <div className="flex flex-wrap gap-2.5">
+                    {colors.map((c: any) => (
+                      <button 
+                        key={c.id} 
+                        onClick={() => setSelectedVariant(product.variants.find((v:any) => v.colorName === c.colorName)!)} 
+                        className={`w-7 h-7 rounded-full border transition-all p-0.5 ${selectedVariant?.colorName === c.colorName ? 'border-stone-900 ring-2 ring-stone-900/10' : 'border-transparent opacity-60 hover:opacity-100'}`}
+                      >
+                        <div className="w-full h-full rounded-full shadow-inner" style={{ backgroundColor: c.hexColor }} />
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
 
-              {isPreOrder && (
-                <div className="flex items-center gap-2 bg-orange-50 text-orange-700 px-3 py-1 rounded-full border border-orange-200">
-                  <CalendarClock size={12} />
-                  <span className="text-[10px] font-bold uppercase tracking-widest">Ships in {selectedVariant.leadTime}</span>
+              {sizesForColor.some((s: any) => s.size && s.size !== 'No Size') && (
+                <div>
+                  <label className="text-[7px] font-bold uppercase text-stone-400 block mb-2 tracking-widest">Available Sizes</label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {sizesForColor.map((s: any) => {
+                      const available = (s.stock > 0 || !!s.leadTime) && !s.isComingSoon;
+                      return (
+                        <button 
+                          key={s.id} 
+                          disabled={!available} 
+                          onClick={() => setSelectedVariant(s)} 
+                          className={`px-3 py-1.5 text-[9px] font-bold border rounded-lg transition-all ${selectedVariant?.id === s.id ? 'bg-stone-900 text-white border-stone-900 shadow-sm' : 'bg-white border-stone-100 hover:border-stone-300 disabled:opacity-20'}`}
+                        >
+                          {s.size}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
             </div>
-
-            <p className="text-stone-500 text-sm leading-relaxed mb-10">{product.description}</p>
             
-            {/* Color Select */}
-            {colors.length > 0 && (
-              <div className="mb-10">
-                <label className="text-[10px] font-bold uppercase text-stone-400 block mb-4 tracking-[0.2em]">Select Color: <span className="text-stone-900">{selectedVariant?.colorName}</span></label>
-                <div className="flex gap-4">
-                  {colors.map((c: any) => (
-                    <button 
-                      key={c.id} 
-                      onClick={() => {
-                        const firstAvail = product.variants.find((v:any) => v.colorName === c.colorName && (v.stock > 0 || v.leadTime) && !v.isComingSoon) || 
-                                           product.variants.find((v:any) => v.colorName === c.colorName);
-                        setSelectedVariant(firstAvail);
-                      }} 
-                      className={`w-12 h-12 rounded-full border-2 p-1 transition-all ${selectedVariant?.colorName === c.colorName ? 'border-stone-900 scale-110 shadow-lg' : 'border-transparent hover:border-stone-200'}`}
-                    >
-                      <div className="w-full h-full rounded-full shadow-inner" style={{ backgroundColor: c.hexColor }} />
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Size Select */}
-            {sizesForColor.some((s: any) => s.size) && (
-              <div className="mb-12">
-                <label className="text-[10px] font-bold uppercase text-stone-400 block mb-4 tracking-[0.2em]">Select Size</label>
-                <div className="flex flex-wrap gap-3">
-                  {sizesForColor.map((s: any) => {
-                    const isSelectable = (s.stock > 0 || !!s.leadTime) && !s.isComingSoon;
-                    return (
-                      <button 
-                        key={s.id} 
-                        disabled={!isSelectable}
-                        onClick={() => setSelectedVariant(s)} 
-                        className={`min-w-[4rem] px-6 py-4 text-xs font-bold border-2 rounded-2xl transition-all ${selectedVariant?.id === s.id ? 'bg-stone-900 text-white border-stone-900 shadow-xl shadow-stone-900/20' : !isSelectable ? 'opacity-30 border-stone-100 cursor-not-allowed line-through' : 'bg-white border-stone-100 hover:border-stone-300'}`}
-                      >
-                        {s.size}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* Actions */}
-            <div className="mt-auto space-y-6">
-              <div className="flex gap-4">
-                <div className="flex items-center bg-stone-50 border border-stone-100 rounded-2xl px-3 h-16">
-                  <button onClick={() => setQuantity(q => Math.max(1, q - 1))} className="w-10 h-10 flex items-center justify-center font-bold text-stone-400 hover:text-stone-900 transition-colors">-</button>
-                  <span className="w-10 text-center font-bold text-stone-900">{quantity}</span>
-                  <button onClick={() => setQuantity(q => q + 1)} className="w-10 h-10 flex items-center justify-center font-bold text-stone-400 hover:text-stone-900 transition-colors">+</button>
-                </div>
-                
-                <button 
-                  disabled={!canPurchase}
-                  onClick={() => { addToCart(product.id, selectedVariant.id, quantity); onClose(); }}
-                  className={`flex-grow h-16 rounded-2xl font-bold flex items-center justify-center gap-4 transition-all shadow-2xl shadow-stone-900/10 ${canPurchase ? 'bg-stone-900 text-white hover:bg-stone-800 active:scale-[0.98]' : 'bg-stone-100 text-stone-400 cursor-not-allowed'}`}
-                >
-                  <ShoppingBag size={20} />
-                  <span>
-                    {selectedVariant?.isComingSoon ? 'Coming Soon' : (selectedVariant?.stock === 0 && !selectedVariant?.leadTime) ? 'Out of Stock' : isPreOrder ? 'Pre-order Now' : 'Add to Shopping Bag'}
-                  </span>
-                </button>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex items-center gap-3 text-stone-400 text-[10px] font-bold uppercase tracking-widest bg-stone-50 p-4 rounded-2xl">
-                  <ShieldCheck size={18} className="text-orange-500" />
-                  <span>Quality Assured</span>
-                </div>
-                <div className="flex items-center gap-3 text-stone-400 text-[10px] font-bold uppercase tracking-widest bg-stone-50 p-4 rounded-2xl">
-                  <Clock size={18} className="text-orange-500" />
-                  <span>Secure Local Payment</span>
-                </div>
-              </div>
+            <div className="mt-auto">
+              <button 
+                disabled={!canPurchase} 
+                onClick={() => { addToCart(product.id, selectedVariant.id, 1); onClose(); }} 
+                className={`w-full h-12 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-xl ${canPurchase ? 'bg-stone-900 text-white hover:bg-stone-800' : 'bg-stone-100 text-stone-300'}`}
+              >
+                <ShoppingBag size={16} />
+                <span className="text-[11px] uppercase tracking-[0.15em]">Add to Collection</span>
+              </button>
             </div>
           </div>
         </div>

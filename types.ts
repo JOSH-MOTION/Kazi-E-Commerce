@@ -14,6 +14,12 @@ export enum UserRole {
   MANAGER = 'MANAGER'
 }
 
+export interface StoreSettings {
+  id: string;
+  tickerText: string;
+  isTickerActive: boolean;
+}
+
 export interface Category {
   id: string;
   name: string;
@@ -30,7 +36,7 @@ export interface ProductVariant {
   price: number;
   stock: number;
   isComingSoon: boolean;
-  leadTime?: string; // e.g. "7-14 days", "2 weeks", "1 month"
+  leadTime?: string;
 }
 
 export interface Product {
@@ -60,6 +66,7 @@ export interface Promotion {
   targetId?: string;
   startDate: string;
   endDate: string;
+  imageUrl?: string;
 }
 
 export interface Order {

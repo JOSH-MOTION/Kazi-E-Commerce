@@ -10,6 +10,7 @@ import Checkout from './components/Checkout';
 import AdminDashboard from './components/AdminDashboard';
 import OrdersList from './components/OrdersList';
 import AuthModal from './components/Auth';
+import InfoPages from './components/InfoPages';
 import { collection, onSnapshot, query, where } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import { db } from './firebase';
 import { Order } from './types';
@@ -33,11 +34,9 @@ const Router = () => {
 
   useEffect(() => {
     if (profile?.role !== 'ADMIN') return;
-    // Removed orderBy to prevent index requirement error
     const q = collection(db, 'orders');
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Order));
-      // In-memory sort
       data.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       setAdminOrders(data);
     });
@@ -52,7 +51,6 @@ const Router = () => {
     const q = query(collection(db, 'orders'), where('userId', '==', user.uid));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Order));
-      // In-memory sort
       data.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       setUserOrders(data);
     });
@@ -60,10 +58,10 @@ const Router = () => {
   }, [user]);
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col w-full">
       <Navbar navigate={(path) => window.location.hash = path} />
       
-      <main className="flex-grow">
+      <main className="flex-grow w-full">
         {view === 'store' && <Storefront addToCart={addToCart} />}
         {view === 'checkout' && (
           <Checkout 
@@ -76,13 +74,16 @@ const Router = () => {
         )}
         {view === 'admin' && profile?.role === 'ADMIN' && <AdminDashboard orders={adminOrders} />}
         {view === 'orders' && (
-          <div className="max-w-4xl mx-auto py-16 px-4">
+          <div className="w-full max-w-5xl mx-auto py-12 px-6">
             <OrdersList orders={userOrders} />
           </div>
         )}
+        {['support', 'track-order', 'momo-guide', 'returns'].includes(view) && (
+          <InfoPages type={view as any} />
+        )}
       </main>
 
-      <Footer />
+      <Footer navigate={(path) => window.location.hash = path} />
       <CartDrawer navigate={(path) => window.location.hash = path} />
       {isAuthOpen && <AuthModal onClose={() => setIsAuthOpen(false)} />}
     </div>
