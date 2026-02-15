@@ -1,16 +1,16 @@
-
 'use client';
 import React from 'react';
 import { X, ShoppingCart } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
-import { PRODUCTS } from '../constants';
 
 interface CartDrawerProps {
   navigate?: (path: string) => void;
 }
 
 const CartDrawer: React.FC<CartDrawerProps> = ({ navigate }) => {
-  const { cart, cartTotal, totalItems, isCartOpen, setIsCartOpen, updateCartQuantity, removeFromCart } = useAppContext();
+  // ✅ FIX: Use live `products` from context instead of static PRODUCTS constant.
+  // Previously, cart drawer showed broken images/names for admin-created products.
+  const { cart, cartTotal, totalItems, isCartOpen, setIsCartOpen, updateCartQuantity, removeFromCart, products } = useAppContext();
 
   const safeNavigate = (path: string) => {
     if (navigate) {
@@ -42,7 +42,7 @@ const CartDrawer: React.FC<CartDrawerProps> = ({ navigate }) => {
             ) : (
               <div className="space-y-8">
                 {cart.map((item: any) => {
-                  const product = PRODUCTS.find(p => p.id === item.productId);
+                  const product = products.find(p => p.id === item.productId);
                   const variant = product?.variants.find(v => v.id === item.variantId);
                   return (
                     <div key={item.variantId} className="flex gap-6 animate-in fade-in slide-in-from-bottom-2">
