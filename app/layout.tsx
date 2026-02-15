@@ -1,4 +1,5 @@
 
+import React from 'react';
 import './globals.css';
 import { Inter, Playfair_Display } from 'next/font/google';
 import { AppProvider } from '../context/AppContext';
