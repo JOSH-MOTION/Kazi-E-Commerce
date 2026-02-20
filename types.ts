@@ -34,6 +34,7 @@ export interface ProductVariant {
   colorName: string;
   hexColor: string;
   price: number;
+  costPrice: number;
   stock: number;
   isComingSoon: boolean;
   leadTime?: string;
@@ -81,4 +82,15 @@ export interface Order {
   customerName: string;
   customerPhone: string;
   deliveryAddress: string;
+}
+
+export interface ManualSale {
+  id: string;
+  itemName: string;
+  quantity: number;
+  salePrice: number;
+  costPrice: number;
+  profit: number;
+  channel: string; // e.g., 'WhatsApp', 'In-Person'
+  createdAt: string;
 }

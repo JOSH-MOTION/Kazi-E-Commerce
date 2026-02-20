@@ -13,12 +13,13 @@ import AuthModal from './components/Auth';
 import InfoPages from './components/InfoPages';
 import { collection, onSnapshot, query, where } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import { db } from './firebase';
-import { Order } from './types';
+import { Order, ManualSale } from './types';
 
 const Router = () => {
   const { cart, cartTotal, profile, user, clearCart, addToCart, isAuthOpen, setIsAuthOpen } = useAppContext();
   const [view, setView] = useState<string>('store');
   const [adminOrders, setAdminOrders] = useState<Order[]>([]);
+  const [manualSales, setManualSales] = useState<ManualSale[]>([]);
   const [userOrders, setUserOrders] = useState<Order[]>([]);
 
   useEffect(() => {
@@ -39,8 +40,23 @@ const Router = () => {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Order));
       data.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       setAdminOrders(data);
+    }, (err) => {
+      console.error("Admin orders listener error:", err);
     });
-    return () => unsubscribe();
+    
+    const qManual = collection(db, 'manualSales');
+    const unsubManual = onSnapshot(qManual, (snapshot) => {
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ManualSale));
+      data.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      setManualSales(data);
+    }, (err) => {
+      console.error("Manual sales listener error:", err);
+    });
+
+    return () => {
+      unsubscribe();
+      unsubManual();
+    };
   }, [profile]);
 
   useEffect(() => {
@@ -53,6 +69,8 @@ const Router = () => {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Order));
       data.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       setUserOrders(data);
+    }, (err) => {
+      console.error("User orders listener error:", err);
     });
     return () => unsubscribe();
   }, [user]);
@@ -72,7 +90,7 @@ const Router = () => {
             onCancel={() => window.location.hash = 'store'}
           />
         )}
-        {view === 'admin' && profile?.role === 'ADMIN' && <AdminDashboard orders={adminOrders} />}
+        {view === 'admin' && profile?.role === 'ADMIN' && <AdminDashboard orders={adminOrders} manualSales={manualSales} />}
         {view === 'orders' && (
           <div className="w-full max-w-5xl mx-auto py-12 px-6">
             <OrdersList orders={userOrders} />

@@ -24,11 +24,11 @@ export const PRODUCTS: Product[] = [
     ],
     isFeatured: true,
     variants: [
-      { id: 'v-1-s-b', sku: 'WS-BLK-S', size: 'S', colorName: 'Obsidian', hexColor: '#1a1a1a', price: 180, stock: 12, isComingSoon: false },
-      { id: 'v-1-m-b', sku: 'WS-BLK-M', size: 'M', colorName: 'Obsidian', hexColor: '#1a1a1a', price: 180, stock: 5, isComingSoon: false },
-      { id: 'v-1-l-b', sku: 'WS-BLK-L', size: 'L', colorName: 'Obsidian', hexColor: '#1a1a1a', price: 180, stock: 0, isComingSoon: false, leadTime: '7-10 days' },
-      { id: 'v-1-s-o', sku: 'WS-OLV-S', size: 'S', colorName: 'Olive Drab', hexColor: '#556b2f', price: 180, stock: 0, isComingSoon: false, leadTime: '2 weeks' },
-      { id: 'v-1-m-o', sku: 'WS-OLV-M', size: 'M', colorName: 'Olive Drab', hexColor: '#556b2f', price: 195, stock: 3, isComingSoon: false }
+      { id: 'v-1-s-b', sku: 'WS-BLK-S', size: 'S', colorName: 'Obsidian', hexColor: '#1a1a1a', price: 180, costPrice: 100, stock: 12, isComingSoon: false },
+      { id: 'v-1-m-b', sku: 'WS-BLK-M', size: 'M', colorName: 'Obsidian', hexColor: '#1a1a1a', price: 180, costPrice: 100, stock: 5, isComingSoon: false },
+      { id: 'v-1-l-b', sku: 'WS-BLK-L', size: 'L', colorName: 'Obsidian', hexColor: '#1a1a1a', price: 180, costPrice: 100, stock: 0, isComingSoon: false, leadTime: '7-10 days' },
+      { id: 'v-1-s-o', sku: 'WS-OLV-S', size: 'S', colorName: 'Olive Drab', hexColor: '#556b2f', price: 180, costPrice: 100, stock: 0, isComingSoon: false, leadTime: '2 weeks' },
+      { id: 'v-1-m-o', sku: 'WS-OLV-M', size: 'M', colorName: 'Olive Drab', hexColor: '#556b2f', price: 195, costPrice: 110, stock: 3, isComingSoon: false }
     ]
   },
   {
@@ -43,8 +43,8 @@ export const PRODUCTS: Product[] = [
     ],
     isFeatured: true,
     variants: [
-      { id: 'v-2-tan', sku: 'BAG-TAN', colorName: 'Desert Tan', hexColor: '#d2b48c', price: 350, stock: 20, isComingSoon: false },
-      { id: 'v-2-blu', sku: 'BAG-BLU', colorName: 'Indigo', hexColor: '#000080', price: 350, stock: 0, isComingSoon: false, leadTime: '1 month' }
+      { id: 'v-2-tan', sku: 'BAG-TAN', colorName: 'Desert Tan', hexColor: '#d2b48c', price: 350, costPrice: 200, stock: 20, isComingSoon: false },
+      { id: 'v-2-blu', sku: 'BAG-BLU', colorName: 'Indigo', hexColor: '#000080', price: 350, costPrice: 200, stock: 0, isComingSoon: false, leadTime: '1 month' }
     ]
   },
   {
@@ -55,7 +55,7 @@ export const PRODUCTS: Product[] = [
     basePrice: 420,
     images: ['https://images.unsplash.com/photo-1553062407-98eeb64c6a62?auto=format&fit=crop&q=80&w=800'],
     variants: [
-      { id: 'v-3-gr', sku: 'MSG-GRY', colorName: 'Concrete', hexColor: '#808080', price: 420, stock: 0, isComingSoon: true }
+      { id: 'v-3-gr', sku: 'MSG-GRY', colorName: 'Concrete', hexColor: '#808080', price: 420, costPrice: 250, stock: 0, isComingSoon: true }
     ]
   }
 ];
