@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { ShieldAlert, Lock, ArrowRight, Loader2, X } from 'lucide-react';
 import { db } from '../firebase';
-import { updateDoc, doc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+import { updateDoc, doc } from 'firebase/firestore';
 import { ADMIN_MASTER_PIN } from '../constants';
 
 interface AdminGateProps { uid: string; onSuccess: () => void; onClose: () => void; }

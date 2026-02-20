@@ -6,6 +6,7 @@ import { AppProvider } from '../context/AppContext';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import CartDrawer from '../components/CartDrawer';
+import GlobalComponents from '../components/GlobalComponents';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 const playfair = Playfair_Display({ subsets: ['latin'], variable: '--font-playfair' });
@@ -31,6 +32,7 @@ export default function RootLayout({
             </main>
             <Footer />
             <CartDrawer />
+            <GlobalComponents />
           </div>
         </AppProvider>
       </body>

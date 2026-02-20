@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { ShoppingCart, LogOut, ShieldCheck, User as UserIcon, Package } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 import AdminGate from './AdminGate';
-import { signOut } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+import { signOut } from 'firebase/auth';
 import { auth } from '../firebase';
 
 interface NavbarProps {
@@ -26,7 +26,10 @@ const Navbar: React.FC<NavbarProps> = ({ navigate }) => {
     if (navigate) {
       navigate(path);
     } else if (isNextJs()) {
-      const target = path === 'store' ? '/' : `/${path}`;
+      let target = path === 'store' ? '/' : `/${path}`;
+      if (['support', 'track-order', 'momo-guide', 'returns'].includes(path)) {
+        target = `/info/${path}`;
+      }
       window.location.href = target;
     } else {
       window.location.hash = path === 'store' ? '' : path;
