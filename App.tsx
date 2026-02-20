@@ -11,7 +11,7 @@ import AdminDashboard from './components/AdminDashboard';
 import OrdersList from './components/OrdersList';
 import AuthModal from './components/Auth';
 import InfoPages from './components/InfoPages';
-import { collection, onSnapshot, query, where } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { db } from './firebase';
 import { Order, ManualSale } from './types';
 

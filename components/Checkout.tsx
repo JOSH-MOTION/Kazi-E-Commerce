@@ -4,7 +4,7 @@ import { ChevronLeft, Info, Loader2, CheckCircle2, ShieldCheck, User, Phone, Cop
 import { CartItem, Order, OrderStatus } from '../types';
 import { PRODUCTS, MOMO_CONFIG } from '../constants';
 import { db } from '../firebase';
-import { collection, addDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+import { collection, addDoc } from 'firebase/firestore';
 import { useAppContext } from '../context/AppContext';
 import LocationSearch from './LocationSearch';
 

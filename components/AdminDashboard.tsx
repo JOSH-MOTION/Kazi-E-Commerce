@@ -3,7 +3,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { TrendingUp, Clock, Package, AlertCircle, Ticket, Edit3, Save, X, Plus, Loader2, Trash2, Layers, CalendarClock, ChevronDown, ChevronUp, Zap, Check, Sparkles, Palette, Settings, LayoutGrid, Image as ImageIcon } from 'lucide-react';
 import { Order, OrderStatus, Product, ProductVariant, Category, Promotion, StoreSettings, ManualSale } from '../types';
 import { db } from '../firebase';
-import { updateDoc, doc, addDoc, collection, deleteDoc, setDoc, getDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+import { updateDoc, doc, addDoc, collection, deleteDoc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { useAppContext } from '../context/AppContext';
 import { uploadToCloudinary, optimizeImage } from '../cloudinary';
 import { MessageCircle, DollarSign, BarChart3 } from 'lucide-react';

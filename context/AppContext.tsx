@@ -1,8 +1,8 @@
 'use client';
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import { auth, db } from '../firebase';
-import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
-import { doc, collection, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+import { onAuthStateChanged } from 'firebase/auth';
+import { doc, collection, onSnapshot } from 'firebase/firestore';
 import { CartItem, Product, Category, Promotion, StoreSettings } from '../types';
 import { PRODUCTS as STATIC_PRODUCTS, CATEGORIES as STATIC_CATEGORIES, PROMOTIONS as STATIC_PROMOS } from '../constants';
 
