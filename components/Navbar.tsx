@@ -1,5 +1,6 @@
 'use client';
 import React, { useState, useEffect } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
 import { ShoppingCart, LogOut, ShieldCheck, User as UserIcon, Package } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 import AdminGate from './AdminGate';
@@ -10,30 +11,24 @@ interface NavbarProps {
   navigate?: (path: string) => void;
 }
 
-const isNextJs = (): boolean => {
-  try {
-    return typeof window !== 'undefined' && !!(window as any).__NEXT_DATA__;
-  } catch {
-    return false;
-  }
-};
-
 const Navbar: React.FC<NavbarProps> = ({ navigate }) => {
   const { user, profile, totalItems, setIsCartOpen, setIsAuthOpen } = useAppContext();
   const [isAdminGateOpen, setIsAdminGateOpen] = useState(false);
+  const router = useRouter();
+  const pathname = usePathname();
 
   const safeNavigate = (path: string) => {
     if (navigate) {
       navigate(path);
-    } else if (isNextJs()) {
-      let target = path === 'store' ? '/' : `/${path}`;
-      if (['support', 'track-order', 'momo-guide', 'returns'].includes(path)) {
-        target = `/info/${path}`;
-      }
-      window.location.href = target;
-    } else {
-      window.location.hash = path === 'store' ? '' : path;
+      return;
     }
+
+    let target = path === 'store' ? '/' : `/${path}`;
+    if (['support', 'track-order', 'momo-guide', 'returns'].includes(path)) {
+      target = `/info/${path}`;
+    }
+    
+    router.push(target);
   };
 
   useEffect(() => {

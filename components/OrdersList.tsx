@@ -1,6 +1,7 @@
 
 'use client';
 import React from 'react';
+import { useRouter } from 'next/navigation';
 import { Package, Clock, CheckCircle, Truck, XCircle, ChevronRight } from 'lucide-react';
 import { Order, OrderStatus } from '../types';
 
@@ -9,6 +10,8 @@ interface OrdersListProps {
 }
 
 const OrdersList: React.FC<OrdersListProps> = ({ orders }) => {
+  const router = useRouter();
+
   if (orders.length === 0) {
     return (
       <div className="text-center py-24 bg-white rounded-[2.5rem] border border-stone-100 shadow-sm">
@@ -18,7 +21,7 @@ const OrdersList: React.FC<OrdersListProps> = ({ orders }) => {
         <h3 className="text-xl font-serif font-bold text-stone-900 mb-2">No orders yet</h3>
         <p className="text-stone-400 text-sm mb-8">Your premium collection is waiting to be started.</p>
         <button 
-          onClick={() => window.location.hash = 'store'}
+          onClick={() => router.push('/')}
           className="bg-stone-900 text-white px-8 py-3 rounded-2xl font-bold text-xs uppercase tracking-widest hover:scale-105 transition-all"
         >
           Explore Collection

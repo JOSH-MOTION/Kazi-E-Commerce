@@ -1,5 +1,6 @@
 'use client';
 import React from 'react';
+import { useRouter } from 'next/navigation';
 import { X, ShoppingCart } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 
@@ -11,14 +12,20 @@ const CartDrawer: React.FC<CartDrawerProps> = ({ navigate }) => {
   // ✅ FIX: Use live `products` from context instead of static PRODUCTS constant.
   // Previously, cart drawer showed broken images/names for admin-created products.
   const { cart, cartTotal, totalItems, isCartOpen, setIsCartOpen, updateCartQuantity, removeFromCart, products } = useAppContext();
+  const router = useRouter();
 
   const safeNavigate = (path: string) => {
     if (navigate) {
       navigate(path);
-    } else {
-      const target = path === 'store' ? '/' : `/${path}`;
-      window.location.href = target;
+      return;
     }
+
+    let target = path === 'store' ? '/' : `/${path}`;
+    if (['support', 'track-order', 'momo-guide', 'returns'].includes(path)) {
+      target = `/info/${path}`;
+    }
+    
+    router.push(target);
   };
 
   if (!isCartOpen) return null;

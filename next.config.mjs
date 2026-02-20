@@ -1,6 +1,5 @@
-import type { NextConfig } from "next";
-
-const nextConfig: NextConfig = {
+/** @type {import('next').NextConfig} */
+const nextConfig = {
   images: {
     remotePatterns: [
       {
@@ -17,8 +16,6 @@ const nextConfig: NextConfig = {
       }
     ],
   },
-  // Allow importing from CDNs if needed, though Next.js prefers local packages
-  transpilePackages: ['lucide-react'],
 };
 
 export default nextConfig;
