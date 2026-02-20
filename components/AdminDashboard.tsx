@@ -1,29 +1,53 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { TrendingUp, Clock, Package, AlertCircle, Ticket, Edit3, Save, X, Plus, Loader2, Trash2, Layers, CalendarClock, ChevronDown, ChevronUp, Zap, Check, Sparkles, Palette, Settings, LayoutGrid, Image as ImageIcon } from 'lucide-react';
-import { Order, OrderStatus, Product, ProductVariant, Category, Promotion, StoreSettings } from '../types';
+import { Order, OrderStatus, Product, ProductVariant, Category, Promotion, StoreSettings, ManualSale } from '../types';
 import { db } from '../firebase';
-import { updateDoc, doc, addDoc, collection, deleteDoc, setDoc, getDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+import { updateDoc, doc, addDoc, collection, deleteDoc, setDoc, getDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import { useAppContext } from '../context/AppContext';
 import { uploadToCloudinary, optimizeImage } from '../cloudinary';
+import { MessageCircle, DollarSign, BarChart3 } from 'lucide-react';
 
 interface AdminDashboardProps {
   orders: Order[];
+  manualSales: ManualSale[];
 }
 
 const STANDARD_SIZES = ['S', 'M', 'L', 'XL', 'XXL', 'OS'];
 
-const AdminDashboard: React.FC<AdminDashboardProps> = ({ orders }) => {
+const AdminDashboard: React.FC<AdminDashboardProps> = ({ orders, manualSales }) => {
   const { products, categories, promotions, settings } = useAppContext();
-  const [activeTab, setActiveTab] = useState<'orders' | 'inventory' | 'promos' | 'categories' | 'settings'>('orders');
+  const [activeTab, setActiveTab] = useState<'orders' | 'inventory' | 'promos' | 'categories' | 'settings' | 'manual'>('orders');
   const [isAddingProduct, setIsAddingProduct] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
-  const stats = {
-    revenue: orders.filter(o => o.status !== OrderStatus.CANCELLED).reduce((sum, o) => sum + o.totalAmount, 0),
-    pending: orders.filter(o => o.status === OrderStatus.PENDING_VERIFICATION).length,
-    total: orders.length
-  };
+  const stats = useMemo(() => {
+    const validOrders = orders.filter(o => o.status !== OrderStatus.CANCELLED);
+    const onlineRevenue = validOrders.reduce((sum, o) => sum + o.totalAmount, 0);
+    
+    // Calculate online profit
+    const onlineProfit = validOrders.reduce((sum, order) => {
+      const orderProfit = order.items.reduce((itemSum, item) => {
+        const product = products.find(p => p.id === item.productId);
+        const variant = product?.variants.find(v => v.id === item.variantId);
+        if (variant) {
+          return itemSum + (variant.price - (variant.costPrice || 0)) * item.quantity;
+        }
+        return itemSum;
+      }, 0);
+      return sum + orderProfit;
+    }, 0);
+
+    const manualRevenue = manualSales.reduce((sum, s) => sum + s.salePrice * s.quantity, 0);
+    const manualProfit = manualSales.reduce((sum, s) => sum + s.profit, 0);
+
+    return {
+      revenue: onlineRevenue + manualRevenue,
+      profit: onlineProfit + manualProfit,
+      pending: orders.filter(o => o.status === OrderStatus.PENDING_VERIFICATION).length,
+      total: orders.length + manualSales.length
+    };
+  }, [orders, manualSales, products]);
 
   const updateOrderStatus = async (orderId: string, newStatus: OrderStatus) => {
     try {
@@ -47,6 +71,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ orders }) => {
               { id: 'inventory', label: 'Products', icon: Layers },
               { id: 'categories', label: 'Categories', icon: LayoutGrid },
               { id: 'promos', label: 'Promos', icon: Ticket },
+              { id: 'manual', label: 'Manual Sales', icon: MessageCircle },
               { id: 'settings', label: 'Settings', icon: Settings }
             ].map(tab => (
               <button
@@ -61,10 +86,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ orders }) => {
           </div>
         </header>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-6 mb-8">
           <StatCard icon={<TrendingUp size={16} />} label="Gross Volume" value={`GH₵ ${stats.revenue.toLocaleString()}`} color="orange" />
+          <StatCard icon={<DollarSign size={16} />} label="Est. Profit" value={`GH₵ ${stats.profit.toLocaleString()}`} color="green" />
           <StatCard icon={<AlertCircle size={16} />} label="Awaiting Verification" value={stats.pending.toString()} color="blue" />
-          <StatCard icon={<Package size={16} />} label="Total Orders" value={stats.total.toString()} color="stone" />
+          <StatCard icon={<Package size={16} />} label="Total Sales" value={stats.total.toString()} color="stone" />
         </div>
 
         {activeTab === 'orders' && <OrdersTable orders={orders} updateStatus={updateOrderStatus} />}
@@ -91,6 +117,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ orders }) => {
 
         {activeTab === 'categories' && <CategoryManager categories={categories} />}
         {activeTab === 'promos' && <PromotionManager promotions={promotions} />}
+        {activeTab === 'manual' && <ManualSalesManager manualSales={manualSales} />}
         {activeTab === 'settings' && <StoreSettingsManager settings={settings} />}
 
         {(isAddingProduct || editingProduct) && <ProductForm product={editingProduct} onClose={() => { setIsAddingProduct(false); setEditingProduct(null); }} />}
@@ -434,8 +461,11 @@ const ProductForm = ({ product, onClose }: { product: Product | null, onClose: (
                             <button type="button" onClick={() => setVariants(variants.filter((_, i) => i !== v.originalIndex))} className="text-stone-200 hover:text-red-500 transition-colors"><Trash2 size={12} /></button>
                           </div>
                           <div className="grid grid-cols-2 gap-2">
+                            <Input label="Cost Price" type="number" value={v.costPrice || 0} onChange={val => updateVariant(v.originalIndex, { costPrice: parseInt(val) || 0 })} />
+                            <Input label="Sale Price" type="number" value={v.price} onChange={val => updateVariant(v.originalIndex, { price: parseInt(val) || 0 })} />
+                          </div>
+                          <div className="mt-2">
                             <Input label="Stock" type="number" value={v.stock} onChange={val => updateVariant(v.originalIndex, { stock: parseInt(val) || 0 })} />
-                            <Input label="Price" type="number" value={v.price} onChange={val => updateVariant(v.originalIndex, { price: parseInt(val) || 0 })} />
                           </div>
                         </div>
                       ))}
@@ -498,11 +528,102 @@ const OrdersTable = ({ orders, updateStatus }: { orders: Order[], updateStatus: 
   </div>
 );
 
+const ManualSalesManager = ({ manualSales }: { manualSales: ManualSale[] }) => {
+  const [form, setForm] = useState({ itemName: '', quantity: 1, salePrice: 0, costPrice: 0, channel: 'WhatsApp' });
+  const [saving, setSaving] = useState(false);
+
+  const addSale = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.itemName || !form.salePrice) return;
+    setSaving(true);
+    try {
+      const profit = (form.salePrice - form.costPrice) * form.quantity;
+      await addDoc(collection(db, 'manualSales'), {
+        ...form,
+        profit,
+        createdAt: new Date().toISOString()
+      });
+      setForm({ itemName: '', quantity: 1, salePrice: 0, costPrice: 0, channel: 'WhatsApp' });
+    } catch (e) { alert("Error recording sale"); }
+    setSaving(false);
+  };
+
+  return (
+    <div className="space-y-8 animate-in fade-in">
+      <div className="bg-white rounded-2xl p-8 border border-stone-100 shadow-sm">
+        <h3 className="text-xl font-serif font-bold text-stone-900 uppercase mb-6">Record Manual Sale</h3>
+        <form onSubmit={addSale} className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 items-end">
+          <Input label="Item Name" value={form.itemName} onChange={(v:any) => setForm({...form, itemName: v})} placeholder="e.g. Custom Tote" />
+          <Input label="Qty" type="number" value={form.quantity} onChange={(v:any) => setForm({...form, quantity: parseInt(v) || 1})} />
+          <Input label="Sale Price" type="number" value={form.salePrice} onChange={(v:any) => setForm({...form, salePrice: parseInt(v) || 0})} />
+          <Input label="Cost Price" type="number" value={form.costPrice} onChange={(v:any) => setForm({...form, costPrice: parseInt(v) || 0})} />
+          <div className="space-y-1.5">
+            <label className="text-[7px] font-bold uppercase text-stone-400 tracking-widest block">Channel</label>
+            <select className="w-full p-3 bg-stone-50 border border-stone-100 rounded-xl outline-none font-bold text-xs" value={form.channel} onChange={e => setForm({...form, channel: e.target.value})}>
+              <option value="WhatsApp">WhatsApp</option>
+              <option value="Instagram">Instagram</option>
+              <option value="In-Person">In-Person</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <button disabled={saving} className="md:col-span-3 lg:col-span-1 py-3.5 bg-stone-900 text-white rounded-xl font-bold uppercase tracking-widest text-[9px] hover:bg-stone-800 shadow-lg">
+            {saving ? <Loader2 size={14} className="animate-spin mx-auto" /> : 'Log Sale'}
+          </button>
+        </form>
+      </div>
+
+      <div className="bg-white border border-stone-100 rounded-2xl overflow-hidden shadow-sm">
+        <div className="p-6 border-b border-stone-50 flex justify-between items-center">
+          <h4 className="text-[10px] font-bold uppercase text-stone-400 tracking-widest">Recent Manual Entries</h4>
+          <div className="flex gap-4">
+            <div className="text-right">
+              <p className="text-[7px] font-bold uppercase text-stone-400">Total Manual Profit</p>
+              <p className="text-sm font-bold text-green-600">GH₵ {manualSales.reduce((s, a) => s + a.profit, 0).toLocaleString()}</p>
+            </div>
+          </div>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-[10px]">
+            <thead className="bg-stone-50/50 border-b border-stone-50">
+              <tr>
+                <th className="px-6 py-4 font-bold uppercase tracking-widest text-stone-400">Date</th>
+                <th className="px-6 py-4 font-bold uppercase tracking-widest text-stone-400">Item</th>
+                <th className="px-6 py-4 font-bold uppercase tracking-widest text-stone-400">Channel</th>
+                <th className="px-6 py-4 font-bold uppercase tracking-widest text-stone-400">Revenue</th>
+                <th className="px-6 py-4 font-bold uppercase tracking-widest text-stone-400">Profit</th>
+                <th className="px-6 py-4 font-bold uppercase tracking-widest text-stone-400">Action</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-stone-50">
+              {manualSales.map((sale) => (
+                <tr key={sale.id} className="hover:bg-stone-50/20 transition-colors">
+                  <td className="px-6 py-4 text-stone-400">{new Date(sale.createdAt).toLocaleDateString()}</td>
+                  <td className="px-6 py-4">
+                    <p className="font-bold text-stone-900">{sale.itemName}</p>
+                    <p className="text-[8px] opacity-40 uppercase">Qty: {sale.quantity}</p>
+                  </td>
+                  <td className="px-6 py-4"><span className="px-2 py-1 bg-stone-100 rounded text-[7px] font-bold uppercase">{sale.channel}</span></td>
+                  <td className="px-6 py-4 font-bold">GH₵ {(sale.salePrice * sale.quantity).toLocaleString()}</td>
+                  <td className="px-6 py-4 font-bold text-green-600">GH₵ {sale.profit.toLocaleString()}</td>
+                  <td className="px-6 py-4">
+                    <button onClick={() => deleteDoc(doc(db, 'manualSales', sale.id))} className="text-stone-200 hover:text-red-500"><Trash2 size={14} /></button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const StatCard = ({ icon, label, value, color }: any) => {
   const colors = {
     orange: 'bg-orange-50 text-orange-600 border-orange-50',
     blue: 'bg-blue-50 text-blue-600 border-blue-50',
-    stone: 'bg-stone-50 text-stone-600 border-stone-100'
+    stone: 'bg-stone-50 text-stone-600 border-stone-100',
+    green: 'bg-green-50 text-green-600 border-green-50'
   };
   return (
     <div className={`p-6 rounded-2xl border ${colors[color as keyof typeof colors]} flex items-center gap-4`}>

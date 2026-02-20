@@ -46,6 +46,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       } else {
         setSettings({ id: 'store_config', tickerText: 'Welcome to J&B Market • Premium African Retail • Accra 2025', isTickerActive: true });
       }
+    }, (err) => {
+      console.error("Settings listener error:", err);
     });
     return () => unsubscribe();
   }, []);
@@ -58,6 +60,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
         setProducts(data);
       }
+    }, (err) => {
+      console.error("Products listener error:", err);
     });
     return () => unsubscribe();
   }, []);
@@ -70,6 +74,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Category));
         setCategories(data);
       }
+    }, (err) => {
+      console.error("Categories listener error:", err);
     });
     return () => unsubscribe();
   }, []);
@@ -82,6 +88,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Promotion));
         setPromotions(data);
       }
+    }, (err) => {
+      console.error("Promotions listener error:", err);
     });
     return () => unsubscribe();
   }, []);
@@ -95,6 +103,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         profileUnsub = onSnapshot(doc(db, 'users', u.uid), (snap) => {
           if (snap.exists()) setProfile(snap.data());
           else setProfile(null);
+        }, (err) => {
+          console.error("Profile listener error:", err);
         });
       } else {
         setUser(null);
