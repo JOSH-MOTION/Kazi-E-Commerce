@@ -1,32 +1,27 @@
 'use client';
 import React from 'react';
+import { useRouter } from 'next/navigation';
 import { Instagram, MessageCircle, Twitter, ArrowUpRight } from 'lucide-react';
 
 interface FooterProps {
   navigate?: (path: string) => void;
 }
 
-const isNextJs = (): boolean => {
-  try {
-    return typeof window !== 'undefined' && !!(window as any).__NEXT_DATA__;
-  } catch {
-    return false;
-  }
-};
-
 const Footer: React.FC<FooterProps> = ({ navigate }) => {
+  const router = useRouter();
+
   const safeNavigate = (path: string) => {
     if (navigate) {
       navigate(path);
-    } else if (isNextJs()) {
-      let target = path === 'store' ? '/' : `/${path}`;
-      if (['support', 'track-order', 'momo-guide', 'returns'].includes(path)) {
-        target = `/info/${path}`;
-      }
-      window.location.href = target;
-    } else {
-      window.location.hash = path === 'store' ? '' : path;
+      return;
     }
+
+    let target = path === 'store' ? '/' : `/${path}`;
+    if (['support', 'track-order', 'momo-guide', 'returns'].includes(path)) {
+      target = `/info/${path}`;
+    }
+    
+    router.push(target);
   };
 
   return (
