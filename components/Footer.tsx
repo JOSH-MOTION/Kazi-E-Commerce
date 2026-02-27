@@ -28,18 +28,18 @@ const Footer: React.FC<FooterProps> = ({ navigate }) => {
     <footer className="bg-stone-950 text-stone-500 py-10 px-4 md:px-10 mt-auto w-full border-t border-white/5">
       <div className="grid grid-cols-1 md:grid-cols-4 gap-8 md:gap-12">
         <div className="col-span-1 md:col-span-1">
-          <h2 className="text-lg font-serif text-white mb-3 tracking-tighter uppercase">J&B Market</h2>
+          <h2 className="text-lg font-serif text-white mb-3 tracking-tighter uppercase">Cartly</h2>
           <p className="text-[8px] uppercase tracking-widest font-bold text-stone-600 mb-6 leading-relaxed max-w-[200px]">
-            Curated Essentials • Modern African Retail • Accra 2025
+            Your Effortless Shop • Accra 2025
           </p>
           <div className="flex gap-3">
-            <a href="https://instagram.com/jb_market" target="_blank" rel="noopener noreferrer" className="w-7 h-7 rounded-lg bg-white/5 flex items-center justify-center text-stone-400 hover:text-white hover:bg-white/10 transition-all border border-white/5">
+            <a href="https://instagram.com/cartly_gh" target="_blank" rel="noopener noreferrer" className="w-7 h-7 rounded-lg bg-white/5 flex items-center justify-center text-stone-400 hover:text-white hover:bg-white/10 transition-all border border-white/5">
               <Instagram size={12} />
             </a>
-            <a href="https://whatsapp.com/channel/0029VaDPD65J3jus6T8N8X3R" target="_blank" rel="noopener noreferrer" className="w-7 h-7 rounded-lg bg-white/5 flex items-center justify-center text-stone-400 hover:text-white hover:bg-white/10 transition-all border border-white/5">
+            <a href="http://wa.me/233242403450" target="_blank" rel="noopener noreferrer" className="w-7 h-7 rounded-lg bg-white/5 flex items-center justify-center text-stone-400 hover:text-white hover:bg-white/10 transition-all border border-white/5">
               <MessageCircle size={12} />
             </a>
-            <a href="https://twitter.com/jb_market" target="_blank" rel="noopener noreferrer" className="w-7 h-7 rounded-lg bg-white/5 flex items-center justify-center text-stone-400 hover:text-white hover:bg-white/10 transition-all border border-white/5">
+            <a href="https://twitter.com/cartly_gh" target="_blank" rel="noopener noreferrer" className="w-7 h-7 rounded-lg bg-white/5 flex items-center justify-center text-stone-400 hover:text-white hover:bg-white/10 transition-all border border-white/5">
               <Twitter size={12} />
             </a>
           </div>
@@ -74,7 +74,7 @@ const Footer: React.FC<FooterProps> = ({ navigate }) => {
       </div>
 
       <div className="mt-10 pt-6 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-4 text-[6px] uppercase tracking-[0.3em] font-bold text-stone-800">
-        <span>© 2025 J&B MARKET RETAIL CO. ACCRA GHANA.</span>
+        <span>© 2025 CARTLY RETAIL CO. ACCRA GHANA.</span>
         <div className="flex gap-4">
           <span>ESTABLISHED 2024</span>
           <span>SECURED MoMo CHECKOUT</span>

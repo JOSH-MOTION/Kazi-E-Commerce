@@ -75,6 +75,7 @@ export const PROMOTIONS: Promotion[] = [
 
 export const MOMO_CONFIG = {
   number: '0242403450',
+  whatsapp: '233242403450',
   name: 'Joshua Doe',
   instructions: 'Please pay the exact amount to Joshua Doe. Use your full name as the reference in your MoMo app. Works with MTN, Telecel, and AT.'
 };

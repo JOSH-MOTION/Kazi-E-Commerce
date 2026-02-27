@@ -6,7 +6,8 @@ import { db } from '../firebase';
 import { updateDoc, doc, addDoc, collection, deleteDoc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { useAppContext } from '../context/AppContext';
 import { uploadToCloudinary, optimizeImage } from '../cloudinary';
-import { MessageCircle, DollarSign, BarChart3 } from 'lucide-react';
+import { MessageCircle, DollarSign, BarChart3, ExternalLink } from 'lucide-react';
+import { MOMO_CONFIG } from '../constants';
 
 interface AdminDashboardProps {
   orders: Order[];
@@ -62,7 +63,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ orders, manualSales }) 
       <div className="w-full">
         <header className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-serif font-bold text-stone-900 mb-2 uppercase tracking-tighter">J&B Hub</h1>
+            <h1 className="text-3xl font-serif font-bold text-stone-900 mb-2 uppercase tracking-tighter">Cartly Hub</h1>
             <p className="text-stone-400 font-bold uppercase tracking-widest text-[8px]">Proprietary Retail Control • Accra.</p>
           </div>
           <div className="flex bg-white p-1 rounded-xl border border-stone-200 shadow-sm overflow-x-auto scrollbar-hide">
@@ -552,41 +553,92 @@ const ProductForm = ({ product, onClose }: { product: Product | null, onClose: (
   }
 };
 
-const OrdersTable = ({ orders, updateStatus }: { orders: Order[], updateStatus: any }) => (
-  <div className="bg-white border border-stone-100 rounded-2xl overflow-hidden shadow-sm w-full">
-    <div className="overflow-x-auto">
-      <table className="w-full text-left text-[10px]">
-        <thead className="bg-stone-50/50 border-b border-stone-50">
-          <tr>
-            <th className="px-6 py-4 font-bold uppercase tracking-widest text-stone-400">Ref</th>
-            <th className="px-6 py-4 font-bold uppercase tracking-widest text-stone-400">Customer</th>
-            <th className="px-6 py-4 font-bold uppercase tracking-widest text-stone-400">Amount</th>
-            <th className="px-6 py-4 font-bold uppercase tracking-widest text-stone-400">Status</th>
-            <th className="px-6 py-4 font-bold uppercase tracking-widest text-stone-400">Actions</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-stone-50">
-          {orders.map((order) => (
-            <tr key={order.id} className="hover:bg-stone-50/20 transition-colors">
-              <td className="px-6 py-4 font-mono font-bold text-stone-300">#{order.id.slice(-6).toUpperCase()}</td>
-              <td className="px-6 py-4">
-                <p className="font-bold text-stone-900">{order.customerName}</p>
-                <p className="text-[8px] opacity-40 uppercase">{order.customerPhone}</p>
-              </td>
-              <td className="px-6 py-4 font-bold">GH₵ {order.totalAmount.toLocaleString()}</td>
-              <td className="px-6 py-4"><StatusBadge status={order.status} /></td>
-              <td className="px-6 py-4">
-                <select className="bg-stone-50 border border-stone-50 rounded px-2 py-1 outline-none text-[8px] font-bold uppercase" value={order.status} onChange={(e) => updateStatus(order.id, e.target.value as OrderStatus)}>
-                  {Object.values(OrderStatus).map(s => <option key={s} value={s}>{s.replace('_', ' ')}</option>)}
-                </select>
-              </td>
+const OrdersTable = ({ orders, updateStatus }: { orders: Order[], updateStatus: any }) => {
+  const [deliveryFeeModal, setDeliveryFeeModal] = useState<{order: Order, fee: string} | null>(null);
+
+  const sendWhatsAppConfirmation = (order: Order, fee: number) => {
+    const totalWithDelivery = order.totalAmount + fee;
+    const message = `Thank you for your order 🙏🏾
+
+🚚 Delivery fee to ${order.deliveryAddress.split(',')[0]} is GHS ${fee}.
+
+Total Amount: GHS ${totalWithDelivery.toLocaleString()}
+
+Please confirm so we dispatch immediately.`;
+
+    const encodedMessage = encodeURIComponent(message);
+    const whatsappUrl = `https://wa.me/${order.customerPhone.startsWith('0') ? '233' + order.customerPhone.substring(1) : order.customerPhone}?text=${encodedMessage}`;
+    window.open(whatsappUrl, '_blank');
+    setDeliveryFeeModal(null);
+  };
+
+  return (
+    <div className="bg-white border border-stone-100 rounded-2xl overflow-hidden shadow-sm w-full relative">
+      <div className="overflow-x-auto">
+        <table className="w-full text-left text-[10px]">
+          <thead className="bg-stone-50/50 border-b border-stone-50">
+            <tr>
+              <th className="px-6 py-4 font-bold uppercase tracking-widest text-stone-400">Ref</th>
+              <th className="px-6 py-4 font-bold uppercase tracking-widest text-stone-400">Customer</th>
+              <th className="px-6 py-4 font-bold uppercase tracking-widest text-stone-400">Amount</th>
+              <th className="px-6 py-4 font-bold uppercase tracking-widest text-stone-400">Status</th>
+              <th className="px-6 py-4 font-bold uppercase tracking-widest text-stone-400">Actions</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody className="divide-y divide-stone-50">
+            {orders.map((order) => (
+              <tr key={order.id} className="hover:bg-stone-50/20 transition-colors">
+                <td className="px-6 py-4 font-mono font-bold text-stone-300">#{order.id.slice(-6).toUpperCase()}</td>
+                <td className="px-6 py-4">
+                  <p className="font-bold text-stone-900">{order.customerName}</p>
+                  <p className="text-[8px] opacity-40 uppercase">{order.customerPhone}</p>
+                </td>
+                <td className="px-6 py-4 font-bold">GH₵ {order.totalAmount.toLocaleString()}</td>
+                <td className="px-6 py-4"><StatusBadge status={order.status} /></td>
+                <td className="px-6 py-4 flex items-center gap-2">
+                  <select className="bg-stone-50 border border-stone-50 rounded px-2 py-1 outline-none text-[8px] font-bold uppercase" value={order.status} onChange={(e) => updateStatus(order.id, e.target.value as OrderStatus)}>
+                    {Object.values(OrderStatus).map(s => <option key={s} value={s}>{s.replace('_', ' ')}</option>)}
+                  </select>
+                  <button 
+                    onClick={() => setDeliveryFeeModal({order, fee: ''})}
+                    className="p-1.5 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-all"
+                    title="Send WhatsApp Confirmation"
+                  >
+                    <MessageCircle size={14} />
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {deliveryFeeModal && (
+        <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-stone-950/40 backdrop-blur-sm" onClick={() => setDeliveryFeeModal(null)} />
+          <div className="relative bg-white rounded-2xl p-6 shadow-2xl w-full max-w-xs animate-in zoom-in-95 duration-200">
+            <h4 className="text-sm font-serif font-bold text-stone-900 mb-4 uppercase">Confirm Delivery Fee</h4>
+            <div className="space-y-4">
+              <Input 
+                label="Delivery Fee (GHS)" 
+                type="number" 
+                value={deliveryFeeModal.fee} 
+                onChange={(v:any) => setDeliveryFeeModal({...deliveryFeeModal, fee: v})} 
+                placeholder="e.g. 20"
+              />
+              <button 
+                onClick={() => sendWhatsAppConfirmation(deliveryFeeModal.order, parseInt(deliveryFeeModal.fee) || 0)}
+                className="w-full py-3 bg-green-600 text-white rounded-xl font-bold uppercase text-[9px] tracking-widest hover:bg-green-700 transition-all"
+              >
+                Generate & Send
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
-  </div>
-);
+  );
+};
 
 const ManualSalesManager = ({ manualSales }: { manualSales: ManualSale[] }) => {
   const [form, setForm] = useState({ itemName: '', quantity: 1, salePrice: 0, costPrice: 0, channel: 'WhatsApp' });
