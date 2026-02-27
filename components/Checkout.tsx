@@ -1,9 +1,9 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { ChevronLeft, Info, Loader2, CheckCircle2, ShieldCheck, User, Phone, Copy, Ticket, X } from 'lucide-react';
+import { ChevronLeft, Info, Loader2, CheckCircle2, ShieldCheck, User, Phone, Copy, Ticket, X, MessageCircle } from 'lucide-react';
 import { CartItem, Order, OrderStatus } from '../types';
 import { PRODUCTS, MOMO_CONFIG } from '../constants';
-import { db } from '../firebase';
+import { db, auth } from '../firebase';
 import { collection, addDoc } from 'firebase/firestore';
 import { useAppContext } from '../context/AppContext';
 import LocationSearch from './LocationSearch';
@@ -23,9 +23,10 @@ const Checkout: React.FC<CheckoutProps> = ({ cart, total: subtotal, userProfile,
   const [promoCode, setPromoCode] = useState('');
   const [activePromo, setActivePromo] = useState<any>(null);
   const [copied, setCopied] = useState(false);
+  const [whatsappUrl, setWhatsappUrl] = useState<string>('');
 
   const [form, setForm] = useState({
-    name: userProfile?.fullName || '',
+    name: userProfile?.fullName || auth.currentUser?.displayName || '',
     phone: userProfile?.phone || '',
     city: userProfile?.city || '',
     detailedAddress: '',
@@ -58,7 +59,9 @@ const Checkout: React.FC<CheckoutProps> = ({ cart, total: subtotal, userProfile,
   const handleFinish = async () => {
     setLoading(true);
     try {
-      await addDoc(collection(db, 'orders'), {
+      const currentUserId = auth.currentUser?.uid || userProfile?.uid || 'guest';
+      
+      const orderData = {
         items: cart,
         subtotal: subtotal,
         discount: discountAmount,
@@ -69,11 +72,37 @@ const Checkout: React.FC<CheckoutProps> = ({ cart, total: subtotal, userProfile,
         customerName: form.name,
         customerPhone: form.phone,
         deliveryAddress: `${form.city}, ${form.detailedAddress}`,
-        userId: userProfile?.uid || 'guest'
-      });
+        userId: currentUserId
+      };
+
+      const docRef = await addDoc(collection(db, 'orders'), orderData);
+      const orderId = docRef.id.slice(-6).toUpperCase();
+      
+      // Construct WhatsApp Message
+      const message = `Good day,
+I have successfully placed an order on your website.
+
+🧾 Order ID: #${orderId}
+📍 Delivery Location: ${form.city}, ${form.detailedAddress}
+📞 Contact: ${form.phone}
+
+Kindly confirm the delivery fee and dispatch details.
+Thank you.`;
+
+      const encodedMessage = encodeURIComponent(message);
+      const url = `https://wa.me/${MOMO_CONFIG.whatsapp}?text=${encodedMessage}`;
+      
+      setWhatsappUrl(url);
       setStep(3);
+      
+      // Attempt automatic redirect (might be blocked, but we have the button as backup)
+      setTimeout(() => {
+        window.location.href = url;
+      }, 2000);
+
     } catch (err) {
-      alert('Failed to place order.');
+      console.error('Order placement error:', err);
+      alert('Failed to place order. Please check your connection or try again.');
     } finally {
       setLoading(false);
     }
@@ -85,10 +114,21 @@ const Checkout: React.FC<CheckoutProps> = ({ cart, total: subtotal, userProfile,
         <CheckCircle2 className="text-green-500" size={48} />
       </div>
       <h2 className="text-5xl font-serif font-bold text-stone-900 mb-4">Medaase! (Thank You)</h2>
-      <p className="text-stone-500 mb-12 text-lg">We've received your order. Our team will verify the payment and contact you shortly for delivery.</p>
-      <button onClick={onComplete} className="w-full bg-stone-900 text-white py-6 rounded-2xl font-bold shadow-2xl shadow-stone-900/20 hover:scale-[1.02] transition-all">
-        Back to the Collection
-      </button>
+      <p className="text-stone-500 mb-8 text-lg">We've received your order. We are redirecting you to WhatsApp to confirm your delivery details...</p>
+      
+      <div className="space-y-4 mb-12">
+        <a 
+          href={whatsappUrl || `https://wa.me/${MOMO_CONFIG.whatsapp}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="w-full py-6 bg-[#25D366] text-white rounded-3xl font-bold flex items-center justify-center gap-3 hover:bg-[#128C7E] transition-all shadow-xl shadow-green-500/20 scale-105"
+        >
+          <MessageCircle size={24} fill="white" /> Confirm on WhatsApp Now
+        </a>
+        <button onClick={onComplete} className="w-full bg-stone-100 text-stone-600 py-4 rounded-2xl font-bold hover:bg-stone-200 transition-all">
+          Back to the Collection
+        </button>
+      </div>
     </div>
   );
 
@@ -134,6 +174,17 @@ const Checkout: React.FC<CheckoutProps> = ({ cart, total: subtotal, userProfile,
                   onChange={e => setForm({...form, detailedAddress: e.target.value})}
                 />
               </div>
+
+              <div className="p-6 bg-stone-50 rounded-3xl border border-stone-100 space-y-2">
+                <div className="flex items-center gap-2 text-stone-900">
+                  <Info size={14} className="text-[#0052D4]" />
+                  <span className="text-[10px] font-bold uppercase tracking-widest">Delivery Information</span>
+                </div>
+                <p className="text-[11px] text-stone-500 leading-relaxed">
+                  Delivery fee is calculated based on your location. After placing your order, we will contact you via WhatsApp to confirm the exact delivery cost and dispatch a rider.
+                </p>
+              </div>
+
               <button 
                 disabled={!form.name || !form.phone || !form.city || !form.detailedAddress} 
                 onClick={() => setStep(2)} 
