@@ -33,6 +33,7 @@ export interface ProductVariant {
   size?: string;
   colorName: string;
   hexColor: string;
+  images?: string[]; // Color-specific images
   price: number;
   costPrice: number;
   stock: number;

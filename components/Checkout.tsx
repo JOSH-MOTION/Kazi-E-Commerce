@@ -200,11 +200,12 @@ const Checkout: React.FC<CheckoutProps> = ({ cart, total: subtotal, userProfile,
               {cart.map((item, idx) => {
                 const product = currentProducts.find(p => p.id === item.productId);
                 const variant = product?.variants?.find(v => v.id === item.variantId);
+                const displayImage = variant?.images?.[0] || product?.images[0];
                 return (
                   <div key={idx} className="flex justify-between items-center group">
                     <div className="flex items-center gap-4">
                       <div className="w-12 h-16 bg-stone-200 rounded-xl overflow-hidden shrink-0">
-                        <img src={product?.images[0]} className="w-full h-full object-cover" alt={product?.name} />
+                        <img src={displayImage} className="w-full h-full object-cover" alt={product?.name} />
                       </div>
                       <div>
                         <p className="text-sm font-bold text-stone-900 line-clamp-1">{product?.name}</p>

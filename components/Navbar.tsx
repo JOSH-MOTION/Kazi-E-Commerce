@@ -49,9 +49,14 @@ const Navbar: React.FC<NavbarProps> = ({ navigate }) => {
       <div className="w-full px-4 md:px-10 flex justify-between items-center">
         <button
           onClick={() => safeNavigate('store')}
-          className="text-lg font-bold tracking-tighter font-serif text-stone-900"
+          className="flex items-center gap-1.5 group"
         >
-          J&B MARKET
+          <div className="w-6 h-6 bg-[#0052D4] rounded-lg flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
+             <ShoppingCart size={14} className="text-white" fill="white" />
+          </div>
+          <span className="text-lg font-bold tracking-tighter font-serif text-[#0052D4]">
+            Cartly
+          </span>
         </button>
 
         <div className="hidden md:flex space-x-6 text-[8px] font-bold uppercase tracking-widest text-stone-400">
@@ -89,7 +94,7 @@ const Navbar: React.FC<NavbarProps> = ({ navigate }) => {
                   className="p-1.5 rounded-lg text-stone-500 hover:bg-stone-50 transition-all"
                   title="Admin Dashboard"
                 >
-                  <ShieldCheck size={16} className="text-orange-500" />
+                  <ShieldCheck size={16} className="text-[#F2994A]" />
                 </button>
               )}
 
@@ -119,7 +124,7 @@ const Navbar: React.FC<NavbarProps> = ({ navigate }) => {
           >
             <ShoppingCart size={16} />
             {totalItems > 0 && (
-              <span className="absolute -top-1 -right-1 h-3.5 w-3.5 bg-orange-600 text-white text-[7px] font-bold flex items-center justify-center rounded-full border border-white">
+              <span className="absolute -top-1 -right-1 h-3.5 w-3.5 bg-[#F2994A] text-white text-[7px] font-bold flex items-center justify-center rounded-full border border-white">
                 {totalItems}
               </span>
             )}
