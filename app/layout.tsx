@@ -14,7 +14,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className="font-sans bg-[#fcfcf9] text-stone-900">
+      <body className="font-sans bg-[#fcfcf9] text-stone-900" suppressHydrationWarning>
         <AppProvider>
           <div className="min-h-screen flex flex-col">
             <Navbar />

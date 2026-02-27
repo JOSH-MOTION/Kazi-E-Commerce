@@ -51,10 +51,11 @@ const CartDrawer: React.FC<CartDrawerProps> = ({ navigate }) => {
                 {cart.map((item: any) => {
                   const product = products.find(p => p.id === item.productId);
                   const variant = product?.variants.find(v => v.id === item.variantId);
+                  const displayImage = variant?.images?.[0] || product?.images[0];
                   return (
                     <div key={item.variantId} className="flex gap-6 animate-in fade-in slide-in-from-bottom-2">
                       <div className="w-24 h-32 bg-stone-100 rounded-2xl overflow-hidden flex-shrink-0">
-                        <img src={product?.images[0]} className="w-full h-full object-cover" alt={product?.name} />
+                        <img src={displayImage} className="w-full h-full object-cover" alt={product?.name} />
                       </div>
                       <div className="flex-grow flex flex-col">
                         <div className="flex justify-between items-start mb-1">

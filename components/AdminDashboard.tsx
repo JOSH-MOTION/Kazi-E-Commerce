@@ -297,7 +297,7 @@ const ProductForm = ({ product, onClose }: { product: Product | null, onClose: (
   const [images, setImages] = useState<string[]>(product?.images || []);
   const [variants, setVariants] = useState<Partial<ProductVariant>[]>(product?.variants || []);
   const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
-  const [newColor, setNewColor] = useState({ name: '', hex: '#1a1a1a' });
+  const [newColor, setNewColor] = useState({ name: '', hex: '#1a1a1a', image: '' });
   const [form, setForm] = useState({
     name: product?.name || '',
     description: product?.description || '',
@@ -329,6 +329,7 @@ const ProductForm = ({ product, onClose }: { product: Product | null, onClose: (
       sku: `${form.name.slice(0, 2).toUpperCase()}-${newColor.name.slice(0, 2).toUpperCase()}-${size.slice(0, 2).toUpperCase()}`,
       colorName: newColor.name,
       hexColor: newColor.hex,
+      images: newColor.image ? [newColor.image] : [],
       size: size === 'No Size' ? undefined : size,
       price: form.basePrice,
       stock: 0,
@@ -338,7 +339,7 @@ const ProductForm = ({ product, onClose }: { product: Product | null, onClose: (
 
     setVariants(prev => [...prev, ...newBatch]);
     setSelectedSizes([]);
-    setNewColor({ name: '', hex: '#1a1a1a' });
+    setNewColor({ name: '', hex: '#1a1a1a', image: '' });
   };
 
   const groupedVariants = useMemo<Record<string, any[]>>(() => {
@@ -418,10 +419,10 @@ const ProductForm = ({ product, onClose }: { product: Product | null, onClose: (
 
           <div className="bg-stone-900 rounded-2xl p-6 text-white space-y-6 shadow-xl">
              <div className="flex items-center gap-3">
-                <Palette className="text-orange-500" size={20} />
+                <Palette className="text-[#F2994A]" size={20} />
                 <h4 className="text-sm font-serif font-bold uppercase tracking-tight">Colorway Batcher</h4>
              </div>
-             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
+             <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-end">
                 <div className="space-y-4">
                    <Input label="Name" value={newColor.name} onChange={v => setNewColor({...newColor, name: v})} placeholder="Midnight" />
                    <div className="flex items-center gap-3">
@@ -430,14 +431,34 @@ const ProductForm = ({ product, onClose }: { product: Product | null, onClose: (
                    </div>
                 </div>
                 <div className="space-y-2">
+                   <label className="text-[8px] font-bold uppercase text-stone-500 block tracking-widest">Color Photo (Optional)</label>
+                   <label className="flex items-center gap-3 p-3 bg-stone-800 border border-stone-700 rounded-xl cursor-pointer hover:border-[#F2994A] transition-all group">
+                      <div className="w-8 h-8 bg-stone-900 rounded-lg flex items-center justify-center text-stone-500 group-hover:text-white transition-colors overflow-hidden">
+                         {newColor.image ? <img src={newColor.image} className="w-full h-full object-cover" /> : <ImageIcon size={16} />}
+                      </div>
+                      <span className="text-[8px] font-bold uppercase tracking-widest text-stone-500 group-hover:text-white">
+                         {newColor.image ? 'Change' : 'Upload'}
+                      </span>
+                      <input type="file" className="hidden" onChange={async (e) => {
+                         if (!e.target.files?.[0]) return;
+                         setLoading(true);
+                         try {
+                            const url = await uploadToCloudinary(e.target.files[0]);
+                            setNewColor({...newColor, image: url});
+                         } catch (err) { alert("Upload failed"); }
+                         setLoading(false);
+                      }} />
+                   </label>
+                </div>
+                <div className="space-y-2">
                    <label className="text-[8px] font-bold uppercase text-stone-500 block tracking-widest">Sizes (Optional)</label>
                    <div className="flex flex-wrap gap-1.5">
                       {STANDARD_SIZES.map(s => (
-                        <button key={s} type="button" onClick={() => setSelectedSizes(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s])} className={`px-3 py-1.5 rounded-lg text-[9px] font-bold border transition-all ${selectedSizes.includes(s) ? 'bg-orange-600 text-white border-orange-600' : 'bg-stone-800 text-stone-500 border-stone-700'}`}>{s}</button>
+                        <button key={s} type="button" onClick={() => setSelectedSizes(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s])} className={`px-3 py-1.5 rounded-lg text-[9px] font-bold border transition-all ${selectedSizes.includes(s) ? 'bg-[#F2994A] text-white border-[#F2994A]' : 'bg-stone-800 text-stone-500 border-stone-700'}`}>{s}</button>
                       ))}
                    </div>
                 </div>
-                <button type="button" onClick={generateVariants} disabled={!newColor.name} className="w-full py-3 bg-white text-stone-900 rounded-xl font-bold uppercase text-[9px] tracking-widest hover:bg-orange-600 hover:text-white transition-all disabled:opacity-20">Append Colorway</button>
+                <button type="button" onClick={generateVariants} disabled={!newColor.name} className="w-full py-3 bg-white text-stone-900 rounded-xl font-bold uppercase text-[9px] tracking-widest hover:bg-[#0052D4] hover:text-white transition-all disabled:opacity-20">Append Colorway</button>
              </div>
           </div>
 
@@ -449,10 +470,49 @@ const ProductForm = ({ product, onClose }: { product: Product | null, onClose: (
               <div className="space-y-8">
                 {(Object.entries(groupedVariants) as [string, any[]][]).map(([color, colorVariants]) => (
                   <div key={color} className="space-y-3">
-                    <div className="flex items-center gap-2">
-                      <div className="w-4 h-4 rounded-full" style={{ backgroundColor: colorVariants[0].hexColor }} />
-                      <h5 className="font-bold text-[10px] uppercase text-stone-900 tracking-widest">{color}</h5>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 rounded-full" style={{ backgroundColor: colorVariants[0].hexColor }} />
+                        <h5 className="font-bold text-[10px] uppercase text-stone-900 tracking-widest">{color}</h5>
+                      </div>
+                      <div className="flex items-center gap-2">
+                         <label className="flex items-center gap-2 px-3 py-1.5 bg-stone-50 border border-stone-100 rounded-lg cursor-pointer hover:bg-white hover:border-stone-900 transition-all group">
+                            {loading ? <Loader2 size={10} className="animate-spin" /> : <ImageIcon size={10} className="text-stone-400 group-hover:text-stone-900" />}
+                            <span className="text-[7px] font-bold uppercase text-stone-400 group-hover:text-stone-900 tracking-widest">Add Color Image</span>
+                            <input type="file" className="hidden" onChange={async (e) => {
+                               if (!e.target.files?.[0]) return;
+                               setLoading(true);
+                               try {
+                                 const url = await uploadToCloudinary(e.target.files[0]);
+                                 colorVariants.forEach(v => {
+                                   const currentImages = v.images || [];
+                                   updateVariant(v.originalIndex, { images: [...currentImages, url] });
+                                 });
+                               } catch (err) { alert("Upload failed"); }
+                               setLoading(false);
+                            }} />
+                         </label>
+                      </div>
                     </div>
+
+                    {colorVariants[0].images && colorVariants[0].images.length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {colorVariants[0].images.map((img: string, imgIdx: number) => (
+                          <div key={imgIdx} className="w-12 h-16 rounded-lg overflow-hidden relative group">
+                            <img src={img} className="w-full h-full object-cover" />
+                            <button type="button" onClick={() => {
+                               colorVariants.forEach(v => {
+                                 const newImages = (v.images || []).filter((_, i) => i !== imgIdx);
+                                 updateVariant(v.originalIndex, { images: newImages });
+                               });
+                            }} className="absolute inset-0 bg-red-600/80 text-white opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all">
+                              <Trash2 size={10} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
                       {colorVariants.map((v: any) => (
                         <div key={v.id} className="p-4 bg-stone-50 rounded-xl border border-stone-100 relative group">
