@@ -6,7 +6,8 @@ import { db } from '../firebase';
 import { updateDoc, doc, addDoc, collection, deleteDoc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { useAppContext } from '../context/AppContext';
 import { uploadToCloudinary, optimizeImage } from '../cloudinary';
-import { MessageCircle, DollarSign, BarChart3 } from 'lucide-react';
+import { MessageCircle, DollarSign, BarChart3, ExternalLink } from 'lucide-react';
+import { MOMO_CONFIG } from '../constants';
 
 interface AdminDashboardProps {
   orders: Order[];
@@ -62,7 +63,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ orders, manualSales }) 
       <div className="w-full">
         <header className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-serif font-bold text-stone-900 mb-2 uppercase tracking-tighter">CARTLY Hub</h1>
+            <h1 className="text-3xl font-serif font-bold text-stone-900 mb-2 uppercase tracking-tighter">Cartly Hub</h1>
             <p className="text-stone-400 font-bold uppercase tracking-widest text-[8px]">Proprietary Retail Control • Accra.</p>
           </div>
           <div className="flex bg-white p-1 rounded-xl border border-stone-200 shadow-sm overflow-x-auto scrollbar-hide">
@@ -312,25 +313,26 @@ const ProductForm = ({ product, onClose }: { product: Product | null, onClose: (
     try {
       const url = await uploadToCloudinary(e.target.files[0]);
       setImages(prev => [...prev, url]);
-    } catch (e) { alert("Upload error"); }
+    } catch (err: any) { 
+      console.error("Upload failed:", err);
+      alert(`Upload error: ${err.message || 'Unknown error'}. Please check your internet connection.`); 
+    }
     setLoading(false);
   };
 
   const generateVariants = () => {
-    if (!newColor.name) {
-      alert("Name your colorway first.");
-      return;
-    }
+    const colorName = newColor.name || 'Standard';
+    const hexColor = newColor.hex || '#1a1a1a';
 
     const sizesToAdd = selectedSizes.length > 0 ? selectedSizes : ['No Size'];
 
     const newBatch = sizesToAdd.map(size => ({
       id: `v-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
-      sku: `${form.name.slice(0, 2).toUpperCase()}-${newColor.name.slice(0, 2).toUpperCase()}-${size.slice(0, 2).toUpperCase()}`,
-      colorName: newColor.name,
-      hexColor: newColor.hex,
+      sku: `${form.name.slice(0, 2).toUpperCase()}-${colorName.slice(0, 2).toUpperCase()}-${size.slice(0, 2).toUpperCase()}`,
+      colorName: colorName,
+      hexColor: hexColor,
       images: newColor.image ? [newColor.image] : [],
-      size: size === 'No Size' ? undefined : size,
+      size: size === 'No Size' ? null : size,
       price: form.basePrice,
       stock: 0,
       leadTime: '',
@@ -354,15 +356,42 @@ const ProductForm = ({ product, onClose }: { product: Product | null, onClose: (
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (images.length === 0) return alert("Add at least one photo.");
-    if (variants.length === 0) return alert("Add at least one colorway.");
+    if (images.length === 0) return alert("Please upload at least one photo for the gallery.");
+    if (variants.length === 0) return alert("Please add at least one variant (use the Colorway Batcher).");
     
     setLoading(true);
     try {
-      if (product) await updateDoc(doc(db, 'products', product.id), { ...form, images, variants });
-      else await addDoc(collection(db, 'products'), { ...form, images, variants });
+      // Clean up variants to remove any undefined values that Firestore rejects
+      const cleanVariants = variants.map(v => {
+        const clean: any = {};
+        Object.keys(v).forEach(key => {
+          const val = (v as any)[key];
+          if (val !== undefined) clean[key] = val;
+        });
+        return clean;
+      });
+
+      const productData = {
+        ...form,
+        images,
+        variants: cleanVariants,
+        updatedAt: new Date().toISOString()
+      };
+
+      if (product) {
+        await updateDoc(doc(db, 'products', product.id), productData);
+      } else {
+        await addDoc(collection(db, 'products'), {
+          ...productData,
+          createdAt: new Date().toISOString()
+        });
+      }
+      alert(`Product ${product ? 'updated' : 'created'} successfully!`);
       onClose();
-    } catch (e) { alert("Save error"); }
+    } catch (err: any) { 
+      console.error("Save error details:", err);
+      alert(`Save error: ${err.message || 'Unknown error'}. Check console for details.`); 
+    }
     setLoading(false);
   };
 
@@ -458,7 +487,27 @@ const ProductForm = ({ product, onClose }: { product: Product | null, onClose: (
                       ))}
                    </div>
                 </div>
-                <button type="button" onClick={generateVariants} disabled={!newColor.name} className="w-full py-3 bg-white text-stone-900 rounded-xl font-bold uppercase text-[9px] tracking-widest hover:bg-[#0052D4] hover:text-white transition-all disabled:opacity-20">Append Colorway</button>
+                <div className="flex flex-col gap-2">
+                  <button 
+                    type="button" 
+                    onClick={generateVariants} 
+                    className="w-full py-3 bg-white text-stone-900 rounded-xl font-bold uppercase text-[9px] tracking-widest hover:bg-[#0052D4] hover:text-white transition-all shadow-sm"
+                  >
+                    {newColor.name ? 'Append Colorway' : 'Add Standard Variant'}
+                  </button>
+                  {images.length > 0 && variants.length === 0 && (
+                    <button 
+                      type="button" 
+                      onClick={() => {
+                        setNewColor({ name: 'Standard', hex: '#1a1a1a', image: images[0] });
+                        setTimeout(generateVariants, 0);
+                      }}
+                      className="w-full py-2 bg-stone-800 text-stone-400 rounded-xl font-bold uppercase text-[7px] tracking-widest hover:text-white transition-all"
+                    >
+                      Quick Add: Use Gallery Images
+                    </button>
+                  )}
+                </div>
              </div>
           </div>
 
@@ -538,7 +587,15 @@ const ProductForm = ({ product, onClose }: { product: Product | null, onClose: (
 
           <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-full max-w-lg px-4 flex gap-4 z-[2000]">
             <button type="button" onClick={onClose} className="flex-grow py-4 bg-white border border-stone-100 rounded-xl font-bold text-[9px] text-stone-400 uppercase tracking-widest shadow-xl">Cancel</button>
-            <button disabled={loading || images.length === 0 || variants.length === 0} className="flex-[2] py-4 bg-stone-900 text-white rounded-xl font-bold text-[9px] uppercase tracking-widest shadow-xl hover:bg-stone-800 transition-all flex items-center justify-center gap-2">
+            <button 
+              type="submit"
+              disabled={loading} 
+              className={`flex-[2] py-4 rounded-xl font-bold text-[9px] uppercase tracking-widest shadow-xl transition-all flex items-center justify-center gap-2 ${
+                (images.length === 0 || variants.length === 0) 
+                ? 'bg-stone-100 text-stone-300 cursor-not-allowed' 
+                : 'bg-stone-900 text-white hover:bg-stone-800'
+              }`}
+            >
               {loading ? <Loader2 className="animate-spin" size={14} /> : <><Check size={14} /> Commit Changes</>}
             </button>
           </div>
@@ -552,41 +609,92 @@ const ProductForm = ({ product, onClose }: { product: Product | null, onClose: (
   }
 };
 
-const OrdersTable = ({ orders, updateStatus }: { orders: Order[], updateStatus: any }) => (
-  <div className="bg-white border border-stone-100 rounded-2xl overflow-hidden shadow-sm w-full">
-    <div className="overflow-x-auto">
-      <table className="w-full text-left text-[10px]">
-        <thead className="bg-stone-50/50 border-b border-stone-50">
-          <tr>
-            <th className="px-6 py-4 font-bold uppercase tracking-widest text-stone-400">Ref</th>
-            <th className="px-6 py-4 font-bold uppercase tracking-widest text-stone-400">Customer</th>
-            <th className="px-6 py-4 font-bold uppercase tracking-widest text-stone-400">Amount</th>
-            <th className="px-6 py-4 font-bold uppercase tracking-widest text-stone-400">Status</th>
-            <th className="px-6 py-4 font-bold uppercase tracking-widest text-stone-400">Actions</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-stone-50">
-          {orders.map((order) => (
-            <tr key={order.id} className="hover:bg-stone-50/20 transition-colors">
-              <td className="px-6 py-4 font-mono font-bold text-stone-300">#{order.id.slice(-6).toUpperCase()}</td>
-              <td className="px-6 py-4">
-                <p className="font-bold text-stone-900">{order.customerName}</p>
-                <p className="text-[8px] opacity-40 uppercase">{order.customerPhone}</p>
-              </td>
-              <td className="px-6 py-4 font-bold">GH₵ {order.totalAmount.toLocaleString()}</td>
-              <td className="px-6 py-4"><StatusBadge status={order.status} /></td>
-              <td className="px-6 py-4">
-                <select className="bg-stone-50 border border-stone-50 rounded px-2 py-1 outline-none text-[8px] font-bold uppercase" value={order.status} onChange={(e) => updateStatus(order.id, e.target.value as OrderStatus)}>
-                  {Object.values(OrderStatus).map(s => <option key={s} value={s}>{s.replace('_', ' ')}</option>)}
-                </select>
-              </td>
+const OrdersTable = ({ orders, updateStatus }: { orders: Order[], updateStatus: any }) => {
+  const [deliveryFeeModal, setDeliveryFeeModal] = useState<{order: Order, fee: string} | null>(null);
+
+  const sendWhatsAppConfirmation = (order: Order, fee: number) => {
+    const totalWithDelivery = order.totalAmount + fee;
+    const message = `Thank you for your order 🙏🏾
+
+🚚 Delivery fee to ${order.deliveryAddress.split(',')[0]} is GHS ${fee}.
+
+Total Amount: GHS ${totalWithDelivery.toLocaleString()}
+
+Please confirm so we dispatch immediately.`;
+
+    const encodedMessage = encodeURIComponent(message);
+    const whatsappUrl = `https://wa.me/${order.customerPhone.startsWith('0') ? '233' + order.customerPhone.substring(1) : order.customerPhone}?text=${encodedMessage}`;
+    window.open(whatsappUrl, '_blank');
+    setDeliveryFeeModal(null);
+  };
+
+  return (
+    <div className="bg-white border border-stone-100 rounded-2xl overflow-hidden shadow-sm w-full relative">
+      <div className="overflow-x-auto">
+        <table className="w-full text-left text-[10px]">
+          <thead className="bg-stone-50/50 border-b border-stone-50">
+            <tr>
+              <th className="px-6 py-4 font-bold uppercase tracking-widest text-stone-400">Ref</th>
+              <th className="px-6 py-4 font-bold uppercase tracking-widest text-stone-400">Customer</th>
+              <th className="px-6 py-4 font-bold uppercase tracking-widest text-stone-400">Amount</th>
+              <th className="px-6 py-4 font-bold uppercase tracking-widest text-stone-400">Status</th>
+              <th className="px-6 py-4 font-bold uppercase tracking-widest text-stone-400">Actions</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody className="divide-y divide-stone-50">
+            {orders.map((order) => (
+              <tr key={order.id} className="hover:bg-stone-50/20 transition-colors">
+                <td className="px-6 py-4 font-mono font-bold text-stone-300">#{order.id.slice(-6).toUpperCase()}</td>
+                <td className="px-6 py-4">
+                  <p className="font-bold text-stone-900">{order.customerName}</p>
+                  <p className="text-[8px] opacity-40 uppercase">{order.customerPhone}</p>
+                </td>
+                <td className="px-6 py-4 font-bold">GH₵ {order.totalAmount.toLocaleString()}</td>
+                <td className="px-6 py-4"><StatusBadge status={order.status} /></td>
+                <td className="px-6 py-4 flex items-center gap-2">
+                  <select className="bg-stone-50 border border-stone-50 rounded px-2 py-1 outline-none text-[8px] font-bold uppercase" value={order.status} onChange={(e) => updateStatus(order.id, e.target.value as OrderStatus)}>
+                    {Object.values(OrderStatus).map(s => <option key={s} value={s}>{s.replace('_', ' ')}</option>)}
+                  </select>
+                  <button 
+                    onClick={() => setDeliveryFeeModal({order, fee: ''})}
+                    className="p-1.5 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-all"
+                    title="Send WhatsApp Confirmation"
+                  >
+                    <MessageCircle size={14} />
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {deliveryFeeModal && (
+        <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-stone-950/40 backdrop-blur-sm" onClick={() => setDeliveryFeeModal(null)} />
+          <div className="relative bg-white rounded-2xl p-6 shadow-2xl w-full max-w-xs animate-in zoom-in-95 duration-200">
+            <h4 className="text-sm font-serif font-bold text-stone-900 mb-4 uppercase">Confirm Delivery Fee</h4>
+            <div className="space-y-4">
+              <Input 
+                label="Delivery Fee (GHS)" 
+                type="number" 
+                value={deliveryFeeModal.fee} 
+                onChange={(v:any) => setDeliveryFeeModal({...deliveryFeeModal, fee: v})} 
+                placeholder="e.g. 20"
+              />
+              <button 
+                onClick={() => sendWhatsAppConfirmation(deliveryFeeModal.order, parseInt(deliveryFeeModal.fee) || 0)}
+                className="w-full py-3 bg-green-600 text-white rounded-xl font-bold uppercase text-[9px] tracking-widest hover:bg-green-700 transition-all"
+              >
+                Generate & Send
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
-  </div>
-);
+  );
+};
 
 const ManualSalesManager = ({ manualSales }: { manualSales: ManualSale[] }) => {
   const [form, setForm] = useState({ itemName: '', quantity: 1, salePrice: 0, costPrice: 0, channel: 'WhatsApp' });

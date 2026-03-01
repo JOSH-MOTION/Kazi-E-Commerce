@@ -76,7 +76,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
         <div className="hidden lg:flex lg:w-1/2 relative bg-stone-900 overflow-hidden flex-col p-16 text-white shrink-0">
           <div className="absolute inset-0">
             <img 
-              src="https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?q=80&w=2000&auto=format&fit=crop" 
+              src="https://images.unsplash.com/photo-1539109132314-34a77bf4cd12?q=80&w=2000&auto=format&fit=crop" 
               className="w-full h-full object-cover opacity-50 transition-transform duration-[10s] hover:scale-110" 
               alt="Editorial Fashion" 
             />
@@ -86,7 +86,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
           </div>
           
           <div className="relative z-10 h-full flex flex-col">
-            <h1 className="text-4xl font-serif font-bold tracking-tighter mb-auto">CARTLY</h1>
+            <h1 className="text-4xl font-serif font-bold tracking-tighter mb-auto">KAZI</h1>
             <div className="space-y-8 max-w-xs">
               <div className="flex items-center gap-3">
                 <Fingerprint className="text-orange-500" size={32} />
