@@ -3,82 +3,52 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // --- HELPER FUNCTIONS ---
-    
     function isAuthenticated() {
       return request.auth != null;
     }
 
     function isAdmin() {
-      return request.auth != null && 
-             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+      return isAuthenticated() && 
              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'ADMIN';
     }
 
-    // --- USERS COLLECTION ---
     match /users/{userId} {
-      // Users can read their own profile. Admins can view all customers for management.
-      // Check userId first to avoid unnecessary isAdmin() calls.
-      allow read: if request.auth != null && (request.auth.uid == userId || isAdmin());
-      
-      // Users can create their own profile document during signup.
-      allow create: if request.auth != null && request.auth.uid == userId;
-      
-      // Allow users to update their own profile.
-      allow update: if request.auth != null && (request.auth.uid == userId || isAdmin());
-      
-      // Profiles should not be deleted.
+      allow read: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+      allow create: if isAuthenticated() && request.auth.uid == userId;
+      allow update: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
       allow delete: if false;
     }
 
-    // --- ORDERS COLLECTION ---
     match /orders/{orderId} {
-      // Admins can see everything. Customers can only see their own orders.
-      // Check userId first to avoid unnecessary isAdmin() calls.
-      allow read: if request.auth != null && (
-        (resource != null && resource.data.userId == request.auth.uid) ||
-        isAdmin()
-      );
-      
-      // Anyone logged in can place an order.
-      allow create: if request.auth != null && 
-                    request.resource.data.userId == request.auth.uid;
-      
-      // Only admins can update an order.
+      allow read: if isAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
+      allow create: if request.resource.data.userId == 'guest' || (isAuthenticated() && request.resource.data.userId == request.auth.uid);
       allow update: if isAdmin();
-      
-      // Prevent order deletion.
       allow delete: if false;
     }
 
-    // --- PRODUCTS COLLECTION ---
     match /products/{productId} {
       allow read: if true;
       allow write: if isAdmin();
     }
 
-    // --- MANUAL SALES COLLECTION ---
-    match /manualSales/{saleId} {
-      // Only admins can access manual sales records.
-      allow read, write: if isAdmin();
-    }
-
-    // --- CATEGORIES COLLECTION ---
     match /categories/{categoryId} {
       allow read: if true;
       allow write: if isAdmin();
     }
 
-    // --- PROMOTIONS COLLECTION ---
     match /promotions/{promoId} {
       allow read: if true;
       allow write: if isAdmin();
     }
 
-    // --- SETTINGS COLLECTION ---
     match /settings/{settingId} {
-      allow read: if true;
+      allow read: if true;        // Anyone can read ticker/store config
       allow write: if isAdmin();
     }
+
+    match /manualSales/{saleId} {
+      allow read, write: if isAdmin();
+    }
+
   }
 }
