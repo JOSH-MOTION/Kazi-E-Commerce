@@ -62,7 +62,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ orders, manualSales }) 
       <div className="w-full">
         <header className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-serif font-bold text-stone-900 mb-2 uppercase tracking-tighter">J&B Hub</h1>
+            <h1 className="text-3xl font-serif font-bold text-stone-900 mb-2 uppercase tracking-tighter">CARTLY Hub</h1>
             <p className="text-stone-400 font-bold uppercase tracking-widest text-[8px]">Proprietary Retail Control • Accra.</p>
           </div>
           <div className="flex bg-white p-1 rounded-xl border border-stone-200 shadow-sm overflow-x-auto scrollbar-hide">
