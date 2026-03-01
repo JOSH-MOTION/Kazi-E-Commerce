@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { ShoppingBag, Star, Clock, ShieldCheck, X, AlertTriangle, ChevronLeft, ChevronRight, Tag, CalendarClock, Zap, Ticket, Sparkle, Image as ImageIcon } from 'lucide-react';
+import { ShoppingBag, Star, Clock, ShieldCheck, X, AlertTriangle, ChevronLeft, ChevronRight, Tag, CalendarClock, Zap, Ticket, Sparkle, Check, Loader2, Image as ImageIcon } from 'lucide-react';
 import { Product, ProductVariant } from '../types';
 import { optimizeImage } from '../cloudinary';
 import { useAppContext } from '../context/AppContext';
@@ -244,6 +244,16 @@ const ProductModal = ({ product, onClose, addToCart }: any) => {
     setActiveImageIdx(0);
   }, [selectedVariant?.colorName]);
 
+  const [isAdding, setIsAdding] = useState(false);
+  const handleAddToCart = () => {
+    setIsAdding(true);
+    addToCart(product.id, selectedVariant.id, 1);
+    setTimeout(() => {
+      setIsAdding(false);
+      onClose();
+    }, 500);
+  };
+
   return (
     <div className="fixed inset-0 z-[1000] flex items-end sm:items-center justify-center overflow-hidden">
       <div className="absolute inset-0 bg-stone-950/60 backdrop-blur-md animate-in fade-in" onClick={onClose} />
@@ -305,7 +315,7 @@ const ProductModal = ({ product, onClose, addToCart }: any) => {
             <p className="text-stone-500 text-[11px] leading-relaxed mb-6 font-medium tracking-wide">{product.description}</p>
             
             <div className="space-y-6 mb-8">
-              {colors.length > 0 && (
+              {colors.length > 1 && (
                 <div>
                   <label className="text-[7px] font-bold uppercase text-stone-400 block mb-2 tracking-widest">Colorway: {selectedVariant?.colorName}</label>
                   <div className="flex flex-wrap gap-2.5">
@@ -324,18 +334,27 @@ const ProductModal = ({ product, onClose, addToCart }: any) => {
 
               {sizesForColor.some((s: any) => s.size && s.size !== 'No Size') && (
                 <div>
-                  <label className="text-[7px] font-bold uppercase text-stone-400 block mb-2 tracking-widest">Available Sizes</label>
-                  <div className="flex flex-wrap gap-1.5">
+                  <div className="flex justify-between items-center mb-2">
+                    <label className="text-[7px] font-bold uppercase text-stone-400 tracking-widest">Select Size</label>
+                    <span className="text-[6px] font-bold text-stone-300 uppercase tracking-widest">Size Guide</span>
+                  </div>
+                  <div className="grid grid-cols-4 gap-2">
                     {sizesForColor.map((s: any) => {
                       const available = (s.stock > 0 || !!s.leadTime) && !s.isComingSoon;
+                      const isSelected = selectedVariant?.id === s.id;
                       return (
                         <button 
                           key={s.id} 
                           disabled={!available} 
                           onClick={() => setSelectedVariant(s)} 
-                          className={`px-3 py-1.5 text-[9px] font-bold border rounded-lg transition-all ${selectedVariant?.id === s.id ? 'bg-[#0052D4] text-white border-[#0052D4] shadow-sm' : 'bg-white border-stone-100 hover:border-stone-300 disabled:opacity-20'}`}
+                          className={`relative h-10 flex items-center justify-center text-[10px] font-bold border rounded-xl transition-all ${
+                            isSelected 
+                            ? 'bg-stone-900 text-white border-stone-900 shadow-md scale-105 z-10' 
+                            : 'bg-white text-stone-900 border-stone-100 hover:border-stone-300 disabled:opacity-20 disabled:bg-stone-50'
+                          }`}
                         >
                           {s.size}
+                          {isSelected && <div className="absolute -top-1 -right-1 w-3 h-3 bg-[#0052D4] rounded-full flex items-center justify-center border border-white"><Check size={6} className="text-white" /></div>}
                         </button>
                       );
                     })}
@@ -346,13 +365,35 @@ const ProductModal = ({ product, onClose, addToCart }: any) => {
             
             <div className="mt-auto">
               <button 
-                disabled={!canPurchase} 
-                onClick={() => { addToCart(product.id, selectedVariant.id, 1); onClose(); }} 
-                className={`w-full h-12 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-xl ${canPurchase ? 'bg-[#0052D4] text-white hover:bg-[#004aad]' : 'bg-stone-100 text-stone-300'}`}
+                disabled={!canPurchase || isAdding} 
+                onClick={handleAddToCart} 
+                className={`w-full h-12 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-xl ${
+                  canPurchase 
+                  ? 'bg-[#0052D4] text-white hover:bg-[#004aad] active:scale-95' 
+                  : 'bg-stone-100 text-stone-300 cursor-not-allowed'
+                }`}
               >
-                <ShoppingBag size={16} />
-                <span className="text-[11px] uppercase tracking-[0.15em]">Add to Collection</span>
+                {isAdding ? (
+                  <Loader2 className="animate-spin" size={16} />
+                ) : canPurchase ? (
+                  <>
+                    <ShoppingBag size={16} />
+                    <span className="text-[11px] uppercase tracking-[0.15em]">Add to Collection</span>
+                  </>
+                ) : (
+                  <>
+                    <AlertTriangle size={16} />
+                    <span className="text-[11px] uppercase tracking-[0.15em]">
+                      {selectedVariant?.isComingSoon ? 'Coming Soon' : 'Out of Stock'}
+                    </span>
+                  </>
+                )}
               </button>
+              {!canPurchase && !selectedVariant?.isComingSoon && (
+                <p className="text-[7px] text-center text-stone-400 mt-2 uppercase font-bold tracking-widest">
+                  This size is currently unavailable. Check back soon.
+                </p>
+              )}
             </div>
           </div>
         </div>

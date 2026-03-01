@@ -53,8 +53,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ orders, manualSales }) 
   const updateOrderStatus = async (orderId: string, newStatus: OrderStatus) => {
     try {
       await updateDoc(doc(db, 'orders', orderId), { status: newStatus });
-    } catch (err) {
-      alert("Failed to update status");
+    } catch (err: any) {
+      alert(`Failed to update status: ${err.message}`);
     }
   };
 
@@ -129,20 +129,43 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ orders, manualSales }) 
 
 const ProductAdminRow = ({ product, onEdit }: any) => {
   const { categories } = useAppContext();
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleDelete = async () => {
+    if (!confirm(`Are you sure you want to remove "${product.name}"? This cannot be undone.`)) return;
+    
+    setIsDeleting(true);
+    try {
+      await deleteDoc(doc(db, 'products', product.id));
+    } catch (err: any) {
+      console.error("Delete error:", err);
+      alert(`Failed to delete product: ${err.message || 'Unknown error'}`);
+    }
+    setIsDeleting(false);
+  };
+
   return (
     <div className="bg-white border border-stone-100 rounded-2xl p-4 flex items-center gap-4 shadow-sm group">
       <div className="w-12 h-14 bg-stone-50 rounded-lg overflow-hidden shrink-0">
-        <img src={optimizeImage(product.images[0], 200)} className="w-full h-full object-cover" />
+        <img src={optimizeImage(product.images?.[0], 200)} className="w-full h-full object-cover" />
       </div>
       <div className="flex-grow">
         <h3 className="font-bold text-stone-900 text-xs">{product.name}</h3>
         <p className="text-[8px] text-stone-400 font-bold uppercase tracking-widest mt-0.5">
-          {categories.find(c => c.id === product.categoryId)?.name} • {product.variants.length} Variants
+          {categories.find(c => c.id === product.categoryId)?.name} • {product.variants?.length || 0} Variants
         </p>
       </div>
       <div className="flex gap-1">
-        <button onClick={onEdit} className="p-2 text-stone-300 hover:text-stone-900 rounded-lg transition-all"><Edit3 size={16} /></button>
-        <button onClick={async () => { if(confirm("Remove this piece?")) await deleteDoc(doc(db, 'products', product.id)); }} className="p-2 text-stone-200 hover:text-red-500 rounded-lg transition-all"><Trash2 size={16} /></button>
+        <button onClick={onEdit} disabled={isDeleting} className="p-2 text-stone-300 hover:text-stone-900 rounded-lg transition-all disabled:opacity-30">
+          <Edit3 size={16} />
+        </button>
+        <button 
+          onClick={handleDelete} 
+          disabled={isDeleting}
+          className="p-2 text-stone-200 hover:text-red-500 rounded-lg transition-all disabled:opacity-30"
+        >
+          {isDeleting ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
+        </button>
       </div>
     </div>
   );
@@ -151,6 +174,7 @@ const ProductAdminRow = ({ product, onEdit }: any) => {
 const CategoryManager = ({ categories }: { categories: Category[] }) => {
   const [name, setName] = useState('');
   const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const addCategory = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -161,6 +185,19 @@ const CategoryManager = ({ categories }: { categories: Category[] }) => {
       setName('');
     } catch (e) { alert("Error adding category"); }
     setSaving(false);
+  };
+
+  const handleDelete = async (id: string, categoryName: string) => {
+    if (!confirm(`Delete category "${categoryName}"? This will not remove products in this category, but they will become uncategorized.`)) return;
+    
+    setDeletingId(id);
+    try {
+      await deleteDoc(doc(db, 'categories', id));
+    } catch (err: any) {
+      console.error("Delete category error:", err);
+      alert(`Failed to delete category: ${err.message}`);
+    }
+    setDeletingId(null);
   };
 
   return (
@@ -178,7 +215,13 @@ const CategoryManager = ({ categories }: { categories: Category[] }) => {
             {categories.map(c => (
               <div key={c.id} className="py-3 flex justify-between items-center">
                 <span className="font-bold text-stone-900 text-xs">{c.name}</span>
-                <button onClick={() => deleteDoc(doc(db, 'categories', c.id))} className="text-stone-200 hover:text-red-500"><Trash2 size={14} /></button>
+                <button 
+                  onClick={() => handleDelete(c.id, c.name)} 
+                  disabled={deletingId === c.id}
+                  className="text-stone-200 hover:text-red-500 disabled:opacity-30 transition-all"
+                >
+                  {deletingId === c.id ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                </button>
               </div>
             ))}
           </div>
@@ -213,6 +256,15 @@ const PromotionManager = ({ promotions }: { promotions: Promotion[] }) => {
       setForm({ code: '', value: 0, description: '', imageUrl: '' });
     } catch (e) { alert("Error adding promo"); }
     setSaving(false);
+  };
+
+  const handleDelete = async (id: string, code: string) => {
+    if (!confirm(`Remove promotion "${code}"?`)) return;
+    try {
+      await deleteDoc(doc(db, 'promotions', id));
+    } catch (err: any) {
+      alert(`Failed to delete promotion: ${err.message}`);
+    }
   };
 
   return (
@@ -252,7 +304,9 @@ const PromotionManager = ({ promotions }: { promotions: Promotion[] }) => {
                   <span className="font-mono font-bold text-orange-600 text-[10px]">{p.code}</span>
                   <p className="text-[7px] text-stone-400 font-bold uppercase">{p.value}% OFF</p>
                 </div>
-                <button onClick={() => deleteDoc(doc(db, 'promotions', p.id))} className="text-stone-200 hover:text-red-500"><Trash2 size={14} /></button>
+                <button onClick={() => handleDelete(p.id, p.code || '')} className="text-stone-200 hover:text-red-500 transition-all">
+                  <Trash2 size={14} />
+                </button>
               </div>
             ))}
           </div>
@@ -320,26 +374,47 @@ const ProductForm = ({ product, onClose }: { product: Product | null, onClose: (
     setLoading(false);
   };
 
-  const generateVariants = () => {
-    const colorName = newColor.name || 'Standard';
-    const hexColor = newColor.hex || '#1a1a1a';
+  const generateVariants = (applyToAll = false) => {
+    const colorNames = applyToAll 
+      ? Array.from(new Set(variants.map(v => v.colorName || 'Standard')))
+      : [newColor.name || 'Standard'];
+
+    if (colorNames.length === 0 && applyToAll) {
+      alert("No existing colors to apply to.");
+      return;
+    }
 
     const sizesToAdd = selectedSizes.length > 0 ? selectedSizes : ['No Size'];
+    const newBatch: any[] = [];
 
-    const newBatch = sizesToAdd.map(size => ({
-      id: `v-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
-      sku: `${form.name.slice(0, 2).toUpperCase()}-${colorName.slice(0, 2).toUpperCase()}-${size.slice(0, 2).toUpperCase()}`,
-      colorName: colorName,
-      hexColor: hexColor,
-      images: newColor.image ? [newColor.image] : [],
-      size: size === 'No Size' ? null : size,
-      price: form.basePrice,
-      stock: 0,
-      leadTime: '',
-      isComingSoon: false
-    }));
+    colorNames.forEach(colorName => {
+      const existingForColor = variants.find(v => v.colorName === colorName);
+      const hexColor = existingForColor?.hexColor || newColor.hex || '#1a1a1a';
+      const colorImages = existingForColor?.images || (newColor.image ? [newColor.image] : []);
 
-    setVariants(prev => [...prev, ...newBatch]);
+      sizesToAdd.forEach(size => {
+        // Check if this variant already exists to avoid duplicates
+        const exists = variants.some(v => v.colorName === colorName && v.size === (size === 'No Size' ? null : size));
+        if (!exists) {
+          newBatch.push({
+            id: `v-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+            sku: `${form.name.slice(0, 2).toUpperCase()}-${colorName.slice(0, 2).toUpperCase()}-${size.slice(0, 2).toUpperCase()}`,
+            colorName: colorName,
+            hexColor: hexColor,
+            images: colorImages,
+            size: size === 'No Size' ? null : size,
+            price: form.basePrice,
+            stock: 10,
+            leadTime: '',
+            isComingSoon: false
+          });
+        }
+      });
+    });
+
+    if (newBatch.length > 0) {
+      setVariants(prev => [...prev, ...newBatch]);
+    }
     setSelectedSizes([]);
     setNewColor({ name: '', hex: '#1a1a1a', image: '' });
   };
@@ -480,39 +555,82 @@ const ProductForm = ({ product, onClose }: { product: Product | null, onClose: (
                    </label>
                 </div>
                 <div className="space-y-2">
-                   <label className="text-[8px] font-bold uppercase text-stone-500 block tracking-widest">Sizes (Optional)</label>
+                   <div className="flex justify-between items-center">
+                      <label className="text-[8px] font-bold uppercase text-stone-500 block tracking-widest">Sizes (Optional)</label>
+                      <button 
+                        type="button" 
+                        onClick={() => setSelectedSizes(prev => prev.length === STANDARD_SIZES.length ? [] : [...STANDARD_SIZES])}
+                        className="text-[7px] font-bold uppercase text-[#F2994A] hover:underline"
+                      >
+                        {selectedSizes.length === STANDARD_SIZES.length ? 'Deselect All' : 'Select All'}
+                      </button>
+                   </div>
                    <div className="flex flex-wrap gap-1.5">
                       {STANDARD_SIZES.map(s => (
                         <button key={s} type="button" onClick={() => setSelectedSizes(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s])} className={`px-3 py-1.5 rounded-lg text-[9px] font-bold border transition-all ${selectedSizes.includes(s) ? 'bg-[#F2994A] text-white border-[#F2994A]' : 'bg-stone-800 text-stone-500 border-stone-700'}`}>{s}</button>
                       ))}
                    </div>
                 </div>
-                <div className="flex flex-col gap-2">
-                  <button 
-                    type="button" 
-                    onClick={generateVariants} 
-                    className="w-full py-3 bg-white text-stone-900 rounded-xl font-bold uppercase text-[9px] tracking-widest hover:bg-[#0052D4] hover:text-white transition-all shadow-sm"
-                  >
-                    {newColor.name ? 'Append Colorway' : 'Add Standard Variant'}
-                  </button>
-                  {images.length > 0 && variants.length === 0 && (
+                  <div className="flex flex-col gap-2">
+                    <button 
+                      type="button" 
+                      onClick={() => generateVariants(false)} 
+                      className="w-full py-3 bg-white text-stone-900 rounded-xl font-bold uppercase text-[9px] tracking-widest hover:bg-[#0052D4] hover:text-white transition-all shadow-sm"
+                    >
+                      {newColor.name ? 'Append Colorway' : 'Add Standard Variant'}
+                    </button>
+                    {Object.keys(groupedVariants).length > 0 && selectedSizes.length > 0 && (
+                      <button 
+                        type="button" 
+                        onClick={() => generateVariants(true)} 
+                        className="w-full py-2 bg-stone-800 text-[#F2994A] rounded-xl font-bold uppercase text-[7px] tracking-widest hover:bg-stone-700 transition-all"
+                      >
+                        Apply Sizes to All Colors
+                      </button>
+                    )}
                     <button 
                       type="button" 
                       onClick={() => {
-                        setNewColor({ name: 'Standard', hex: '#1a1a1a', image: images[0] });
-                        setTimeout(generateVariants, 0);
+                        setSelectedSizes([...STANDARD_SIZES]);
+                        setNewColor({ name: 'Standard', hex: '#1a1a1a', image: images[0] || '' });
+                        setTimeout(() => generateVariants(false), 0);
                       }}
                       className="w-full py-2 bg-stone-800 text-stone-400 rounded-xl font-bold uppercase text-[7px] tracking-widest hover:text-white transition-all"
                     >
-                      Quick Add: Use Gallery Images
+                      Quick Add: All Sizes (Standard)
                     </button>
-                  )}
-                </div>
+                  </div>
              </div>
           </div>
 
           <div className="space-y-6">
-            <h4 className="text-sm font-serif font-bold text-stone-900 pb-2 border-b border-stone-50 uppercase tracking-tight">Piece Inventory</h4>
+            <div className="flex items-center justify-between pb-2 border-b border-stone-50">
+              <h4 className="text-sm font-serif font-bold text-stone-900 uppercase tracking-tight">Piece Inventory</h4>
+              <div className="flex gap-2">
+                <button 
+                  type="button" 
+                  onClick={() => {
+                    if(confirm("Set all variants to base price?")) {
+                      setVariants(prev => prev.map(v => ({ ...v, price: form.basePrice })));
+                    }
+                  }}
+                  className="px-3 py-1 bg-stone-50 border border-stone-100 rounded-lg text-[7px] font-bold uppercase text-stone-400 hover:text-stone-900 transition-all"
+                >
+                  Sync Prices
+                </button>
+                <button 
+                  type="button" 
+                  onClick={() => {
+                    if(confirm("Set all variants stock to 10?")) {
+                      setVariants(prev => prev.map(v => ({ ...v, stock: 10 })));
+                    }
+                  }}
+                  className="px-3 py-1 bg-stone-50 border border-stone-100 rounded-lg text-[7px] font-bold uppercase text-stone-400 hover:text-stone-900 transition-all"
+                >
+                  Sync Stock (10)
+                </button>
+              </div>
+            </div>
             {Object.keys(groupedVariants).length === 0 ? (
               <p className="text-[8px] text-stone-300 uppercase tracking-widest text-center py-10">Use Batcher to add variants.</p>
             ) : (
@@ -639,6 +757,7 @@ Please confirm so we dispatch immediately.`;
               <th className="px-6 py-4 font-bold uppercase tracking-widest text-stone-400">Amount</th>
               <th className="px-6 py-4 font-bold uppercase tracking-widest text-stone-400">Status</th>
               <th className="px-6 py-4 font-bold uppercase tracking-widest text-stone-400">Actions</th>
+              <th className="px-6 py-4 font-bold uppercase tracking-widest text-stone-400"></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-stone-50">
@@ -661,6 +780,22 @@ Please confirm so we dispatch immediately.`;
                     title="Send WhatsApp Confirmation"
                   >
                     <MessageCircle size={14} />
+                  </button>
+                </td>
+                <td className="px-6 py-4">
+                  <button 
+                    onClick={async () => {
+                      if (confirm(`Delete order #${order.id.slice(-6).toUpperCase()}?`)) {
+                        try {
+                          await deleteDoc(doc(db, 'orders', order.id));
+                        } catch (err: any) {
+                          alert(`Failed to delete order: ${err.message}`);
+                        }
+                      }
+                    }} 
+                    className="text-stone-200 hover:text-red-500 transition-all"
+                  >
+                    <Trash2 size={14} />
                   </button>
                 </td>
               </tr>
@@ -774,7 +909,20 @@ const ManualSalesManager = ({ manualSales }: { manualSales: ManualSale[] }) => {
                   <td className="px-6 py-4 font-bold">GH₵ {(sale.salePrice * sale.quantity).toLocaleString()}</td>
                   <td className="px-6 py-4 font-bold text-green-600">GH₵ {sale.profit.toLocaleString()}</td>
                   <td className="px-6 py-4">
-                    <button onClick={() => deleteDoc(doc(db, 'manualSales', sale.id))} className="text-stone-200 hover:text-red-500"><Trash2 size={14} /></button>
+                    <button 
+                      onClick={async () => {
+                        if (confirm(`Remove entry for "${sale.itemName}"?`)) {
+                          try {
+                            await deleteDoc(doc(db, 'manualSales', sale.id));
+                          } catch (err: any) {
+                            alert(`Failed to delete entry: ${err.message}`);
+                          }
+                        }
+                      }} 
+                      className="text-stone-200 hover:text-red-500 transition-all"
+                    >
+                      <Trash2 size={14} />
+                    </button>
                   </td>
                 </tr>
               ))}
