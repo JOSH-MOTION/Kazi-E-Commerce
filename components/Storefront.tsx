@@ -213,10 +213,13 @@ const ProductModal = ({ product, onClose, addToCart }: any) => {
   });
   const [activeImageIdx, setActiveImageIdx] = useState(0);
 
-  // Combine product images with color-specific images
+  // Combine product images with color-specific images, removing duplicates
   const allImages = useMemo(() => {
     const colorImages = selectedVariant?.images || [];
-    return colorImages.length > 0 ? colorImages : product.images;
+    const productImages = product.images || [];
+    // Prioritize color images, then add product images, filtering out duplicates
+    const combined = [...colorImages, ...productImages];
+    return Array.from(new Set(combined)).filter(Boolean);
   }, [product.images, selectedVariant]);
 
   const colors = Array.from(new Set(product.variants?.map((v: any) => v.colorName) || [])).map(name => 
@@ -259,29 +262,33 @@ const ProductModal = ({ product, onClose, addToCart }: any) => {
             
             {allImages.length > 1 && (
               <>
-                {/* Fixed Navigation Arrows - Prominent on Mobile */}
+                {/* Navigation Arrows */}
                 <button 
                   onClick={prevImage}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/90 backdrop-blur border border-stone-200 flex items-center justify-center text-stone-900 shadow-lg z-20 hover:scale-110 active:scale-95 transition-all"
+                  className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/80 backdrop-blur border border-stone-100 flex items-center justify-center text-stone-900 shadow-md z-30 hover:bg-white transition-all"
                 >
-                  <ChevronLeft size={20} />
+                  <ChevronLeft size={18} />
                 </button>
                 <button 
                   onClick={nextImage}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/90 backdrop-blur border border-stone-200 flex items-center justify-center text-stone-900 shadow-lg z-20 hover:scale-110 active:scale-95 transition-all"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/80 backdrop-blur border border-stone-100 flex items-center justify-center text-stone-900 shadow-md z-30 hover:bg-white transition-all"
                 >
-                  <ChevronRight size={20} />
+                  <ChevronRight size={18} />
                 </button>
 
-                {/* Indicators - Larger Touch Area */}
-                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-3 px-4 py-2 rounded-full bg-white/40 backdrop-blur-md z-20 border border-white/50">
-                  {allImages.map((_:any, i:number) => (
-                    <button 
-                      key={i} 
-                      onClick={(e) => { e.stopPropagation(); setActiveImageIdx(i); }} 
-                      className={`h-2 rounded-full transition-all ${i === activeImageIdx ? 'bg-stone-900 w-5' : 'bg-stone-400 w-2 hover:bg-stone-600'}`} 
-                    />
-                  ))}
+                {/* Thumbnail Strip */}
+                <div className="absolute bottom-4 left-0 right-0 px-4 z-20">
+                  <div className="flex justify-center gap-2 overflow-x-auto py-2 no-scrollbar">
+                    {allImages.map((img: any, i: number) => (
+                      <button 
+                        key={i} 
+                        onClick={(e) => { e.stopPropagation(); setActiveImageIdx(i); }} 
+                        className={`relative w-10 h-12 rounded-md overflow-hidden border-2 transition-all shrink-0 ${i === activeImageIdx ? 'border-stone-900 scale-110 shadow-md' : 'border-transparent opacity-50 hover:opacity-100'}`}
+                      >
+                        <img src={optimizeImage(img, 100)} className="w-full h-full object-cover" alt="" />
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </>
             )}

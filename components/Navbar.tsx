@@ -6,7 +6,6 @@ import { useAppContext } from '../context/AppContext';
 import AdminGate from './AdminGate';
 import { signOut } from 'firebase/auth';
 import { auth } from '../firebase';
-import Image from "next/image";
 
 interface NavbarProps {
   navigate?: (path: string) => void;
@@ -48,19 +47,17 @@ const Navbar: React.FC<NavbarProps> = ({ navigate }) => {
   return (
     <nav className="sticky top-0 z-[100] bg-white/90 backdrop-blur-md border-b border-stone-100 w-full h-14 flex items-center">
       <div className="w-full px-4 md:px-10 flex justify-between items-center">
-      <button
-  onClick={() => safeNavigate("store")}
-  className="flex items-center group"
->
-  <Image
-    src="/catly.png"
-    alt="Cartly Logo"
-    width={110}
-    height={40}
-    className="object-contain group-hover:scale-105 transition-transform"
-    priority
-  />
-</button>
+        <button
+          onClick={() => safeNavigate('store')}
+          className="flex items-center gap-1.5 group"
+        >
+          <div className="w-6 h-6 bg-[#0052D4] rounded-lg flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
+             <ShoppingCart size={14} className="text-white" fill="white" />
+          </div>
+          <span className="text-lg font-bold tracking-tighter font-serif text-[#0052D4]">
+            Cartly
+          </span>
+        </button>
 
         <div className="hidden md:flex space-x-6 text-[8px] font-bold uppercase tracking-widest text-stone-400">
           <button onClick={() => safeNavigate('store')} className="hover:text-stone-900 transition">
