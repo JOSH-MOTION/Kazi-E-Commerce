@@ -190,7 +190,7 @@ const ProductCard: React.FC<{ product: Product, colorName: string, variants: Pro
       </div>
       <div className="p-2 md:p-2.5">
         <h3 className="font-serif font-bold text-stone-900 text-[10px] md:text-[11px] group-hover:text-[#0052D4] transition-colors line-clamp-1">
-          {product.name} <span className="text-stone-400 font-sans font-normal ml-1">/ {colorName}</span>
+          {product.name} {colorName && colorName !== 'Standard' && colorName !== 'null' && <span className="text-stone-400 font-sans font-normal ml-1">/ {colorName}</span>}
         </h3>
         <div className="flex items-end justify-between mt-1">
           <span className="font-bold text-stone-900 text-[9px] md:text-[10px]">GH₵ {variants[0].price.toLocaleString()}</span>
@@ -317,7 +317,9 @@ const ProductModal = ({ product, onClose, addToCart }: any) => {
             <div className="space-y-6 mb-8">
               {colors.length > 1 && (
                 <div>
-                  <label className="text-[7px] font-bold uppercase text-stone-400 block mb-2 tracking-widest">Colorway: {selectedVariant?.colorName}</label>
+                  <label className="text-[7px] font-bold uppercase text-stone-400 block mb-2 tracking-widest">
+                    {selectedVariant?.colorName && selectedVariant.colorName !== 'Standard' ? `Colorway: ${selectedVariant.colorName}` : 'Select Color'}
+                  </label>
                   <div className="flex flex-wrap gap-2.5">
                     {colors.map((c: any) => (
                       <button 
@@ -325,7 +327,7 @@ const ProductModal = ({ product, onClose, addToCart }: any) => {
                         onClick={() => setSelectedVariant(product.variants.find((v:any) => v.colorName === c.colorName)!)} 
                         className={`w-7 h-7 rounded-full border transition-all p-0.5 ${selectedVariant?.colorName === c.colorName ? 'border-stone-900 ring-2 ring-stone-900/10' : 'border-transparent opacity-60 hover:opacity-100'}`}
                       >
-                        <div className="w-full h-full rounded-full shadow-inner" style={{ backgroundColor: c.hexColor }} />
+                        <div className="w-full h-full rounded-full shadow-inner" style={{ backgroundColor: c.hexColor || '#1a1a1a' }} />
                       </button>
                     ))}
                   </div>

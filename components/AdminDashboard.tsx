@@ -362,11 +362,12 @@ const ProductForm = ({ product, onClose }: { product: Product | null, onClose: (
   });
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files?.[0]) return;
+    if (!e.target.files || e.target.files.length === 0) return;
     setLoading(true);
     try {
-      const url = await uploadToCloudinary(e.target.files[0]);
-      setImages(prev => [...prev, url]);
+      const uploadPromises = Array.from(e.target.files).map(file => uploadToCloudinary(file));
+      const urls = await Promise.all(uploadPromises);
+      setImages(prev => [...prev, ...urls]);
     } catch (err: any) { 
       console.error("Upload failed:", err);
       alert(`Upload error: ${err.message || 'Unknown error'}. Please check your internet connection.`); 
@@ -432,7 +433,7 @@ const ProductForm = ({ product, onClose }: { product: Product | null, onClose: (
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (images.length === 0) return alert("Please upload at least one photo for the gallery.");
-    if (variants.length === 0) return alert("Please add at least one variant (use the Colorway Batcher).");
+    if (variants.length === 0) return alert("Please add at least one variant (use the Batcher or Add as Single Item).");
     
     setLoading(true);
     try {
@@ -515,7 +516,7 @@ const ProductForm = ({ product, onClose }: { product: Product | null, onClose: (
                 <label className="aspect-[4/5] bg-stone-50 border border-dashed border-stone-200 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:border-stone-900 transition-all">
                   <Plus size={18} className="text-stone-300 mb-1" />
                   <span className="text-[7px] font-bold text-stone-400 uppercase">Upload</span>
-                  <input type="file" className="hidden" onChange={handleImageUpload} />
+                  <input type="file" className="hidden" multiple onChange={handleImageUpload} />
                 </label>
               </div>
             </div>
@@ -591,6 +592,30 @@ const ProductForm = ({ product, onClose }: { product: Product | null, onClose: (
                     <button 
                       type="button" 
                       onClick={() => {
+                        if (images.length === 0) {
+                          alert("Please upload at least one gallery image first.");
+                          return;
+                        }
+                        setVariants([{
+                          id: `v-${Date.now()}`,
+                          sku: `${form.name.slice(0, 3).toUpperCase()}-BASE`,
+                          colorName: null,
+                          hexColor: '#1a1a1a',
+                          images: images,
+                          size: null,
+                          price: form.basePrice,
+                          stock: 10,
+                          leadTime: '',
+                          isComingSoon: false
+                        }]);
+                      }}
+                      className="w-full py-2 bg-stone-800 text-emerald-400 rounded-xl font-bold uppercase text-[7px] tracking-widest hover:bg-stone-700 transition-all border border-emerald-400/20"
+                    >
+                      Add as Single Item (No Size/Color)
+                    </button>
+                    <button 
+                      type="button" 
+                      onClick={() => {
                         setSelectedSizes([...STANDARD_SIZES]);
                         setNewColor({ name: 'Standard', hex: '#1a1a1a', image: images[0] || '' });
                         setTimeout(() => generateVariants(false), 0);
@@ -646,14 +671,15 @@ const ProductForm = ({ product, onClose }: { product: Product | null, onClose: (
                          <label className="flex items-center gap-2 px-3 py-1.5 bg-stone-50 border border-stone-100 rounded-lg cursor-pointer hover:bg-white hover:border-stone-900 transition-all group">
                             {loading ? <Loader2 size={10} className="animate-spin" /> : <ImageIcon size={10} className="text-stone-400 group-hover:text-stone-900" />}
                             <span className="text-[7px] font-bold uppercase text-stone-400 group-hover:text-stone-900 tracking-widest">Add Color Image</span>
-                            <input type="file" className="hidden" onChange={async (e) => {
-                               if (!e.target.files?.[0]) return;
+                            <input type="file" className="hidden" multiple onChange={async (e) => {
+                               if (!e.target.files || e.target.files.length === 0) return;
                                setLoading(true);
                                try {
-                                 const url = await uploadToCloudinary(e.target.files[0]);
+                                 const uploadPromises = Array.from(e.target.files).map(file => uploadToCloudinary(file));
+                                 const urls = await Promise.all(uploadPromises);
                                  colorVariants.forEach(v => {
                                    const currentImages = v.images || [];
-                                   updateVariant(v.originalIndex, { images: [...currentImages, url] });
+                                   updateVariant(v.originalIndex, { images: [...currentImages, ...urls] });
                                  });
                                } catch (err) { alert("Upload failed"); }
                                setLoading(false);
