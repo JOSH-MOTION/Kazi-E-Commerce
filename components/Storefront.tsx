@@ -71,7 +71,7 @@ const Storefront: React.FC<StorefrontProps> = ({ addToCart }) => {
         <div className="absolute inset-0 z-0">
           <img 
             key={settings?.heroImage || 'default'}
-            src={settings?.heroImage || "https://images.unsplash.com/photo-1519085185758-2ad98035527e?auto=format&fit=crop&q=80&w=1000"} 
+            src={settings?.heroImage || "https://images.unsplash.com/photo-1512436991641-6745cdb1723f?w=1000&auto=format&fit=crop&q=80"} 
             className="w-full h-full object-cover animate-in fade-in duration-1000"
             alt="Hero Background"
           />
