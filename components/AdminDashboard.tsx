@@ -317,30 +317,165 @@ const PromotionManager = ({ promotions }: { promotions: Promotion[] }) => {
 };
 
 const StoreSettingsManager = ({ settings }: { settings: StoreSettings | null }) => {
-  const [text, setText] = useState(settings?.tickerText || '');
+  const [form, setForm] = useState({
+    tickerText: settings?.tickerText || '',
+    heroTitle: settings?.heroTitle || "MEN'S FASHION",
+    heroSubtitle: settings?.heroSubtitle || "Min. 35-70% Off",
+    heroImage: settings?.heroImage || "https://images.unsplash.com/photo-1519085185758-2ad98035527e?auto=format&fit=crop&q=80&w=1000",
+    heroCtaText: settings?.heroCtaText || "Shop Now",
+    heroSecondaryCtaText: settings?.heroSecondaryCtaText || "Read More",
+    banner1Title: settings?.banner1Title || "Women's Wear",
+    banner1Subtitle: settings?.banner1Subtitle || "Min. 35-70% Off",
+    banner1Image: settings?.banner1Image || "https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&q=80&w=800",
+    banner2Title: settings?.banner2Title || "Men's Fashion",
+    banner2Subtitle: settings?.banner2Subtitle || "Flat 70% Off",
+    banner2Image: settings?.banner2Image || "https://images.unsplash.com/photo-1488161628813-244768e7f63e?auto=format&fit=crop&q=80&w=800",
+    // Promo Grid
+    promo1Title: settings?.promo1Title || "Women's Style",
+    promo1Subtitle: settings?.promo1Subtitle || "Up to 70% Off",
+    promo1Image: settings?.promo1Image || "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&q=80&w=800",
+    promo1Badge: settings?.promo1Badge || "New Arrivals",
+    promo1Link: settings?.promo1Link || "",
+    promo2Title: settings?.promo2Title || "Men's Fashion",
+    promo2Subtitle: settings?.promo2Subtitle || "Flat 50% Off",
+    promo2Image: settings?.promo2Image || "https://images.unsplash.com/photo-1488161628813-244768e7f63e?auto=format&fit=crop&q=80&w=800",
+    promo2Badge: settings?.promo2Badge || "Trending Now",
+    promo2Link: settings?.promo2Link || "",
+    promo3Title: settings?.promo3Title || "Handbag",
+    promo3Subtitle: settings?.promo3Subtitle || "Shop Now",
+    promo3Image: settings?.promo3Image || "https://images.unsplash.com/photo-1584917865442-de89df76afd3?auto=format&fit=crop&q=80&w=600",
+    promo3Badge: settings?.promo3Badge || "25% Off",
+    promo3Link: settings?.promo3Link || "",
+    promo4Title: settings?.promo4Title || "Watch",
+    promo4Subtitle: settings?.promo4Subtitle || "Shop Now",
+    promo4Image: settings?.promo4Image || "https://images.unsplash.com/photo-1524592094714-0f0654e20314?auto=format&fit=crop&q=80&w=600",
+    promo4Badge: settings?.promo4Badge || "45% Off",
+    promo4Link: settings?.promo4Link || "",
+  });
   const [saving, setSaving] = useState(false);
+
+  const handleUpload = async (field: string, file: File) => {
+    setSaving(true);
+    try {
+      const url = await uploadToCloudinary(file);
+      setForm(prev => ({ ...prev, [field]: url }));
+    } catch (e) { alert("Upload failed"); }
+    setSaving(false);
+  };
 
   const saveSettings = async () => {
     setSaving(true);
     try {
-      await setDoc(doc(db, 'settings', 'store_config'), { tickerText: text, isTickerActive: true }, { merge: true });
-      alert("Storefront updated.");
+      await setDoc(doc(db, 'settings', 'store_config'), { ...form, isTickerActive: true }, { merge: true });
+      alert("Storefront updated successfully.");
     } catch (e) { alert("Error saving settings"); }
     setSaving(false);
   };
 
   return (
-    <div className="max-w-xl">
-      <div className="bg-stone-900 rounded-2xl p-8 text-white shadow-xl space-y-6">
-        <h3 className="text-lg font-serif font-bold uppercase">Announcement Ticker</h3>
-        <textarea 
-          value={text} onChange={e => setText(e.target.value)}
-          className="w-full h-32 bg-stone-800 border border-stone-700 rounded-xl p-4 text-xs font-bold text-white outline-none focus:border-orange-500"
-          placeholder="New arrivals coming soon..."
-        />
-        <button onClick={saveSettings} disabled={saving} className="w-full py-4 bg-white text-stone-900 rounded-xl font-bold uppercase tracking-widest text-[9px] hover:bg-orange-400 hover:text-white transition-all">
-          {saving ? <Loader2 size={14} className="animate-spin mx-auto" /> : 'Publish to Live'}
-        </button>
+    <div className="max-w-4xl space-y-8">
+      <div className="bg-white border border-stone-100 rounded-2xl p-8 shadow-sm space-y-8">
+        <div className="flex items-center justify-between">
+           <h3 className="text-lg font-serif font-bold uppercase text-stone-900">Storefront Customization</h3>
+           <button onClick={saveSettings} disabled={saving} className="px-8 py-3 bg-[#0052D4] text-white rounded-xl font-bold uppercase tracking-widest text-[9px] hover:bg-[#004aad] transition-all shadow-lg">
+            {saving ? <Loader2 size={14} className="animate-spin mx-auto" /> : 'Publish Changes'}
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          {/* Ticker & Hero */}
+          <div className="space-y-6">
+            <h4 className="text-[10px] font-bold uppercase text-stone-400 tracking-widest border-b border-stone-50 pb-2">Announcement & Hero</h4>
+            <div className="space-y-4">
+              <Input label="Ticker Message" value={form.tickerText} onChange={(v: string) => setForm({...form, tickerText: v})} />
+              <Input label="Hero Title" value={form.heroTitle} onChange={(v: string) => setForm({...form, heroTitle: v})} />
+              <Input label="Hero Subtitle" value={form.heroSubtitle} onChange={(v: string) => setForm({...form, heroSubtitle: v})} />
+              <div className="grid grid-cols-2 gap-4">
+                <Input label="Primary CTA" value={form.heroCtaText} onChange={(v: string) => setForm({...form, heroCtaText: v})} />
+                <Input label="Secondary CTA" value={form.heroSecondaryCtaText} onChange={(v: string) => setForm({...form, heroSecondaryCtaText: v})} />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[7px] font-bold uppercase text-stone-400 tracking-widest block">Hero Image</label>
+                <div className="flex items-center gap-4">
+                  <div className="w-16 h-16 rounded-lg bg-stone-50 border border-stone-100 overflow-hidden shrink-0">
+                    <img src={form.heroImage} className="w-full h-full object-cover" alt="" />
+                  </div>
+                  <label className="flex-grow h-10 border-2 border-dashed border-stone-100 rounded-xl flex items-center justify-center cursor-pointer hover:border-stone-900 transition-all">
+                    <span className="text-[8px] font-bold uppercase text-stone-400">Change Image</span>
+                    <input type="file" className="hidden" onChange={e => e.target.files?.[0] && handleUpload('heroImage', e.target.files[0])} />
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Banners */}
+          <div className="space-y-6">
+            <h4 className="text-[10px] font-bold uppercase text-stone-400 tracking-widest border-b border-stone-50 pb-2">Bottom Banners</h4>
+            <div className="space-y-6">
+              {/* Banner 1 */}
+              <div className="p-4 bg-stone-50 rounded-xl space-y-4">
+                <p className="text-[8px] font-bold uppercase text-stone-300">Banner Left</p>
+                <Input label="Title" value={form.banner1Title} onChange={(v: string) => setForm({...form, banner1Title: v})} />
+                <Input label="Subtitle" value={form.banner1Subtitle} onChange={(v: string) => setForm({...form, banner1Subtitle: v})} />
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-lg bg-white border border-stone-200 overflow-hidden shrink-0">
+                    <img src={form.banner1Image} className="w-full h-full object-cover" alt="" />
+                  </div>
+                  <label className="flex-grow h-8 border border-dashed border-stone-200 rounded-lg flex items-center justify-center cursor-pointer hover:border-stone-900 transition-all bg-white">
+                    <span className="text-[7px] font-bold uppercase text-stone-400">Upload</span>
+                    <input type="file" className="hidden" onChange={e => e.target.files?.[0] && handleUpload('banner1Image', e.target.files[0])} />
+                  </label>
+                </div>
+              </div>
+
+              {/* Banner 2 */}
+              <div className="p-4 bg-stone-50 rounded-xl space-y-4">
+                <p className="text-[8px] font-bold uppercase text-stone-300">Banner Right</p>
+                <Input label="Title" value={form.banner2Title} onChange={(v: string) => setForm({...form, banner2Title: v})} />
+                <Input label="Subtitle" value={form.banner2Subtitle} onChange={(v: string) => setForm({...form, banner2Subtitle: v})} />
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-lg bg-white border border-stone-200 overflow-hidden shrink-0">
+                    <img src={form.banner2Image} className="w-full h-full object-cover" alt="" />
+                  </div>
+                  <label className="flex-grow h-8 border border-dashed border-stone-200 rounded-lg flex items-center justify-center cursor-pointer hover:border-stone-900 transition-all bg-white">
+                    <span className="text-[7px] font-bold uppercase text-stone-400">Upload</span>
+                    <input type="file" className="hidden" onChange={e => e.target.files?.[0] && handleUpload('banner2Image', e.target.files[0])} />
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Promo Grid Customization */}
+        <div className="space-y-6">
+          <h4 className="text-[10px] font-bold uppercase text-stone-400 tracking-widest border-b border-stone-50 pb-2">Promo Grid (4 Banners)</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {[1, 2, 3, 4].map(num => (
+              <div key={num} className="p-6 bg-stone-50 rounded-2xl space-y-4">
+                <p className="text-[8px] font-bold uppercase text-stone-300">Promo Banner {num}</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <Input label="Title" value={(form as any)[`promo${num}Title`]} onChange={(v: string) => setForm({...form, [`promo${num}Title`]: v})} />
+                  <Input label="Subtitle" value={(form as any)[`promo${num}Subtitle`]} onChange={(v: string) => setForm({...form, [`promo${num}Subtitle`]: v})} />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <Input label="Badge" value={(form as any)[`promo${num}Badge`]} onChange={(v: string) => setForm({...form, [`promo${num}Badge`]: v})} />
+                  <Input label="Link (Category/Product ID)" value={(form as any)[`promo${num}Link`]} onChange={(v: string) => setForm({...form, [`promo${num}Link`]: v})} />
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className="w-16 h-16 rounded-lg bg-white border border-stone-200 overflow-hidden shrink-0">
+                    <img src={(form as any)[`promo${num}Image`]} className="w-full h-full object-cover" alt="" />
+                  </div>
+                  <label className="flex-grow h-10 border border-dashed border-stone-200 rounded-xl flex items-center justify-center cursor-pointer hover:border-stone-900 transition-all bg-white">
+                    <span className="text-[8px] font-bold uppercase text-stone-400">Upload Image</span>
+                    <input type="file" className="hidden" onChange={e => e.target.files?.[0] && handleUpload(`promo${num}Image`, e.target.files[0])} />
+                  </label>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -79,15 +79,29 @@ const Checkout: React.FC<CheckoutProps> = ({ cart, total: subtotal, userProfile,
       const orderId = docRef.id.slice(-6).toUpperCase();
       
       // Construct WhatsApp Message
-      const message = `Good day,
-I have successfully placed an order on your website.
+      const itemsList = cart.map(item => {
+        const product = liveProducts.find(p => p.id === item.productId);
+        const variant = product?.variants?.find(v => v.id === item.variantId);
+        const sizeLine = variant?.size && variant.size !== 'No Size' ? `\n📏 Size: ${variant.size}` : '';
+        return `🛍 Item: ${product?.name || 'Unknown Item'}${sizeLine}\n📦 Quantity: ${item.quantity}`;
+      }).join('\n\n');
 
+      const message = `Hello Cartly 👋
+
+My name is ${form.name}
+
+I would like to order:
+
+${itemsList}
+
+Please can I know the delivery price to ${form.city || 'Accra'}?
+
+Thank you.
+
+---
 🧾 Order ID: #${orderId}
-📍 Delivery Location: ${form.city}, ${form.detailedAddress}
 📞 Contact: ${form.phone}
-
-Kindly confirm the delivery fee and dispatch details.
-Thank you.`;
+📍 Address: ${form.detailedAddress}`;
 
       const encodedMessage = encodeURIComponent(message);
       const url = `https://wa.me/${MOMO_CONFIG.whatsapp}?text=${encodedMessage}`;
@@ -233,7 +247,7 @@ Thank you.`;
                 <button onClick={() => setStep(1)} className="px-10 py-6 border-2 border-stone-100 rounded-3xl font-bold text-stone-600 hover:bg-stone-50 transition-all">Edit Delivery</button>
                 <button 
                   disabled={loading || !form.momoId} 
-                  onClick={handleFinish} 
+                  onClick={() => handleFinish()} 
                   className="flex-grow bg-stone-900 text-white py-6 rounded-3xl font-bold flex items-center justify-center gap-4 hover:bg-stone-800 transition-all shadow-2xl shadow-stone-900/10"
                 >
                   {loading ? <Loader2 className="animate-spin" size={24} /> : 'Confirm Order & Pay'}

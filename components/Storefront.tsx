@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { ShoppingBag, Star, Clock, ShieldCheck, X, AlertTriangle, ChevronLeft, ChevronRight, Tag, CalendarClock, Zap, Ticket, Sparkle, Check, Loader2, Image as ImageIcon } from 'lucide-react';
+import { ShoppingBag, Star, Clock, ShieldCheck, X, AlertTriangle, ChevronLeft, ChevronRight, Tag, CalendarClock, Zap, Ticket, Sparkle, Check, Loader2, Image as ImageIcon, Truck, CreditCard, RotateCcw, Headphones, Search, Heart, User, Menu } from 'lucide-react';
 import { Product, ProductVariant } from '../types';
 import { optimizeImage } from '../cloudinary';
 import { useAppContext } from '../context/AppContext';
@@ -10,26 +10,45 @@ interface StorefrontProps {
 }
 
 const Storefront: React.FC<StorefrontProps> = ({ addToCart }) => {
-  const { products, categories, settings, promotions } = useAppContext();
+  const { products, categories, settings, promotions, searchQuery, setSearchQuery } = useAppContext();
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [activeCategory, setActiveCategory] = useState<string>('all');
+  const [activeTab, setActiveTab] = useState<'new' | 'best' | 'top'>('new');
 
-  const filteredProducts = activeCategory === 'all' 
-    ? products 
-    : products.filter(p => p.categoryId === activeCategory);
+  const filteredProducts = useMemo(() => {
+    let result = products;
+    
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter(p => 
+        p.name.toLowerCase().includes(query) || 
+        p.description.toLowerCase().includes(query) ||
+        categories.find(c => c.id === p.categoryId)?.name?.toLowerCase().includes(query)
+      );
+    } else {
+      if (activeCategory !== 'all') {
+        result = result.filter(p => p.categoryId === activeCategory);
+      }
+      
+      // Apply tab filtering when not searching
+      if (activeTab === 'best' || activeTab === 'top') {
+        result = result.filter(p => p.isFeatured);
+      }
+    }
+    
+    return result;
+  }, [products, activeCategory, searchQuery, categories, activeTab]);
 
   const displayItems = useMemo(() => {
     const items: { product: Product, colorName: string, variants: ProductVariant[] }[] = [];
     
     filteredProducts.forEach(product => {
-      // Group variants by color
       const colorGroups: Record<string, ProductVariant[]> = {};
       product.variants.forEach(v => {
         if (!colorGroups[v.colorName]) colorGroups[v.colorName] = [];
         colorGroups[v.colorName].push(v);
       });
 
-      // Create a display item for each color
       Object.entries(colorGroups).forEach(([colorName, variants]) => {
         items.push({
           product,
@@ -45,155 +64,395 @@ const Storefront: React.FC<StorefrontProps> = ({ addToCart }) => {
   const tickerMessage = settings?.tickerText || "Cartly • Your Effortless Shop • Accra 2025";
 
   return (
-    <div className="w-full pb-12">
-      {/* Dynamic Announcement Ticker - Full Width */}
-      {settings?.isTickerActive !== false && (
-        <div className="bg-stone-900 text-white overflow-hidden py-1.5 border-b border-white/5">
-          <div className="flex animate-[scroll_50s_linear_infinite] whitespace-nowrap">
-            {[1, 2, 3, 4, 5, 6, 7, 8].map((_, idx) => (
-              <span key={idx} className="inline-flex items-center gap-2.5 mx-6 text-[7px] font-bold uppercase tracking-[0.2em]">
-                <SparkleIcon /> {tickerMessage}
-              </span>
-            ))}
+    <div className="w-full bg-white">
+      {/* Hero Section - Slider Style */}
+      <section className="relative h-[500px] md:h-[700px] bg-[#f3f4f6] overflow-hidden">
+        <div className="max-w-[1400px] mx-auto h-full flex flex-col md:flex-row items-center px-6 md:px-12 relative">
+          <div className="w-full md:w-1/2 pt-12 md:pt-0 z-20 animate-in slide-in-from-left duration-700">
+            <span className="text-orange-500 font-serif italic text-xl md:text-2xl mb-2 block drop-shadow-sm">Season Sale</span>
+            <h1 className="text-4xl md:text-8xl font-black text-stone-900 mb-4 leading-[0.9] uppercase tracking-tighter drop-shadow-sm">
+              {settings?.heroTitle?.split(' ').map((word, i) => (
+                <React.Fragment key={i}>
+                  {word} {i === 0 && <br />}
+                </React.Fragment>
+              )) || <>MEN'S <br /> FASHION</>}
+            </h1>
+            <p className="text-lg md:text-xl text-stone-600 mb-8 font-medium max-w-md drop-shadow-sm">{settings?.heroSubtitle || "Min. 35-70% Off"}</p>
+            <div className="flex gap-4">
+              <button 
+                onClick={() => document.getElementById('collection-anchor')?.scrollIntoView({ behavior: 'smooth' })}
+                className="bg-stone-900 text-white px-10 py-4 rounded-sm font-bold text-xs uppercase tracking-widest hover:bg-orange-500 transition-all shadow-xl shadow-black/10"
+              >
+                {settings?.heroCtaText || "Shop Now"}
+              </button>
+              <button 
+                onClick={() => document.getElementById('categories')?.scrollIntoView({ behavior: 'smooth' })}
+                className="bg-white/80 backdrop-blur-sm border border-stone-200 text-stone-900 px-10 py-4 rounded-sm font-bold text-xs uppercase tracking-widest hover:bg-white transition-all"
+              >
+                {settings?.heroSecondaryCtaText || "Read More"}
+              </button>
+            </div>
+          </div>
+          <div className="absolute right-0 bottom-0 w-full md:w-[60%] h-full z-10 pointer-events-none">
+            <div className="relative w-full h-full flex items-end justify-end">
+              <img 
+                src={settings?.heroImage || "https://images.unsplash.com/photo-1519085185758-2ad98035527e?auto=format&fit=crop&q=80&w=1000"} 
+                className="h-[95%] md:h-[110%] w-auto object-contain object-bottom animate-in fade-in zoom-in-95 duration-1000 select-none"
+                alt="Hero Model"
+              />
+              {/* Subtle gradient overlay to blend image bottom */}
+              <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-[#f3f4f6] to-transparent z-20" />
+            </div>
           </div>
         </div>
-      )}
-
-      {/* Hero Section - Limitless Width */}
-      <section className="relative h-[25vh] md:h-[40vh] flex items-center justify-center overflow-hidden bg-stone-900 w-full">
-        <img 
-          src="https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&q=80&w=2000" 
-          className="absolute inset-0 w-full h-full object-cover opacity-40"
-          alt="Premium African Fashion"
-        />
-        <div className="absolute inset-0 bg-gradient-to-b from-stone-950/20 via-stone-950/40 to-stone-950/90" />
-        <div className="relative z-10 text-center px-6 max-w-lg animate-fade-in">
-          <span className="text-orange-500 font-bold tracking-[0.4em] text-[7px] uppercase mb-2 block">Boutique Collective</span>
-          <h2 className="text-xl md:text-3xl font-serif text-white mb-4 tracking-tight leading-tight uppercase">Authentic Crafts. Refined Design.</h2>
-          <button 
-            onClick={() => document.getElementById('collection')?.scrollIntoView({ behavior: 'smooth' })}
-            className="bg-white text-stone-900 px-6 py-2 rounded-full font-bold hover:scale-105 transition-all shadow-xl text-[8px] uppercase tracking-widest"
-          >
-            Explore Catalogue
-          </button>
+        {/* Slider Dots */}
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2 z-30">
+          <div className="w-3 h-3 rounded-full bg-orange-500 border-2 border-white shadow-sm" />
+          <div className="w-3 h-3 rounded-full bg-stone-300 border-2 border-white shadow-sm" />
         </div>
       </section>
 
-      {/* Promotions Banner - Scaled down */}
-      {promotions.length > 0 && (
-        <section className="px-4 md:px-10 mt-6 w-full">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-            {promotions.map(p => (
-              <div key={p.id} className="bg-white border border-stone-100 rounded-xl overflow-hidden flex h-20 md:h-24 shadow-sm hover:shadow-md transition-shadow group">
-                <div className="w-1/4 bg-stone-50 shrink-0 overflow-hidden">
-                  {p.imageUrl ? (
-                    <img src={optimizeImage(p.imageUrl, 400)} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt={p.code} />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-stone-200">
-                      <ImageIcon size={16} />
-                    </div>
-                  )}
-                </div>
-                <div className="p-2 md:p-3 flex flex-col justify-center flex-grow">
-                  <div className="flex items-center justify-between mb-0.5">
-                    <span className="text-[6px] font-mono font-bold text-[#F2994A] bg-[#F2994A]/10 px-1 py-0.5 rounded tracking-widest">{p.code}</span>
-                    <span className="text-[6px] font-bold uppercase text-stone-400">{p.value}% OFF</span>
-                  </div>
-                  <h4 className="text-[9px] font-bold text-stone-900 uppercase tracking-widest line-clamp-1">{p.description}</h4>
-                  <p className="text-[6px] text-stone-400 mt-0.5 uppercase tracking-widest">Limited Offer</p>
-                </div>
-              </div>
-            ))}
+      {/* Features Bar */}
+      <section className="max-w-[1400px] mx-auto py-12 px-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 border-b border-stone-100">
+        <div className="flex items-center gap-4">
+          <div className="p-3 bg-stone-50 rounded-full text-orange-500"><Truck size={24} /></div>
+          <div>
+            <h4 className="font-bold text-sm text-stone-900">Free Shipping</h4>
+            <p className="text-[10px] text-stone-400 uppercase font-bold tracking-widest">On All Orders Over $99</p>
           </div>
-        </section>
-      )}
+        </div>
+        <div className="flex items-center gap-4">
+          <div className="p-3 bg-stone-50 rounded-full text-orange-500"><CreditCard size={24} /></div>
+          <div>
+            <h4 className="font-bold text-sm text-stone-900">Secure Payment</h4>
+            <p className="text-[10px] text-stone-400 uppercase font-bold tracking-widest">We ensure secure payment</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-4">
+          <div className="p-3 bg-stone-50 rounded-full text-orange-500"><RotateCcw size={24} /></div>
+          <div>
+            <h4 className="font-bold text-sm text-stone-900">100% Money Back</h4>
+            <p className="text-[10px] text-stone-400 uppercase font-bold tracking-widest">30 Days Return Policy</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-4">
+          <div className="p-3 bg-stone-50 rounded-full text-orange-500"><Headphones size={24} /></div>
+          <div>
+            <h4 className="font-bold text-sm text-stone-900">Online Support</h4>
+            <p className="text-[10px] text-stone-400 uppercase font-bold tracking-widest">24/7 Dedicated Support</p>
+          </div>
+        </div>
+      </section>
 
-      {/* Category Filter - Sticky Full Width */}
-      <section id="collection" className="px-4 md:px-10 py-3 flex justify-center sticky top-14 z-40 bg-[#fcfcf9]/95 backdrop-blur-md border-b border-stone-100 mt-2 w-full">
-        <div className="flex gap-1.5 overflow-x-auto pb-0.5 scrollbar-hide">
-          <button 
-            onClick={() => setActiveCategory('all')}
-            className={`whitespace-nowrap px-4 py-1.5 rounded-full text-[7px] font-bold uppercase tracking-widest border transition-all ${activeCategory === 'all' ? 'bg-stone-900 text-white border-stone-900 shadow-md' : 'bg-white text-stone-400 border-stone-100 hover:border-stone-300'}`}
-          >
-            All
-          </button>
-          {categories.map(cat => (
+      {/* Promo Banners Grid */}
+      <section className="max-w-[1400px] mx-auto py-12 px-6 grid grid-cols-1 md:grid-cols-4 gap-6">
+        {/* Promo 1 - Large */}
+        <div className="md:col-span-2 md:row-span-2 relative h-[400px] md:h-auto bg-stone-900 rounded-sm overflow-hidden group">
+          <img src={settings?.promo1Image || "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&q=80&w=800"} className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 opacity-80" alt="Promo 1" />
+          <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-transparent" />
+          <div className="absolute top-12 left-12 z-10">
+            <span className="text-orange-500 font-bold text-[10px] uppercase tracking-widest mb-2 block">{settings?.promo1Badge || "New Arrivals"}</span>
+            <h3 className="text-4xl md:text-5xl font-black text-white mb-2 uppercase tracking-tighter">
+              {settings?.promo1Title?.split(' ').map((w, i) => <React.Fragment key={i}>{w}{i === 0 && <br />}</React.Fragment>) || <>Women's<br />Style</>}
+            </h3>
+            <p className="text-white/80 mb-6 font-medium">{settings?.promo1Subtitle || "Up to 70% Off"}</p>
             <button 
-              key={cat.id}
-              onClick={() => setActiveCategory(cat.id)}
-              className={`whitespace-nowrap px-4 py-1.5 rounded-full text-[7px] font-bold uppercase tracking-widest border transition-all ${activeCategory === cat.id ? 'bg-stone-900 text-white border-stone-900 shadow-md' : 'bg-white text-stone-400 border-stone-100 hover:border-stone-300'}`}
+              onClick={() => {
+                if (settings?.promo1Link) {
+                  const cat = categories.find(c => c.id === settings.promo1Link);
+                  if (cat) setActiveCategory(cat.id);
+                  else {
+                    const prod = products.find(p => p.id === settings.promo1Link);
+                    if (prod) setSelectedProduct(prod);
+                  }
+                } else {
+                  const womenCat = categories.find(c => c.name.toLowerCase().includes('women'))?.id;
+                  if (womenCat) setActiveCategory(womenCat);
+                }
+                document.getElementById('collection-anchor')?.scrollIntoView({ behavior: 'smooth' });
+              }}
+              className="bg-white text-stone-900 px-8 py-3 rounded-sm font-bold text-[10px] uppercase tracking-widest hover:bg-orange-500 hover:text-white transition-all shadow-lg"
             >
-              {cat.name}
+              Shop Now
+            </button>
+          </div>
+        </div>
+
+        {/* Promo 2 - Wide */}
+        <div className="md:col-span-2 relative h-[250px] bg-stone-900 rounded-sm overflow-hidden group">
+          <img src={settings?.promo2Image || "https://images.unsplash.com/photo-1488161628813-244768e7f63e?auto=format&fit=crop&q=80&w=800"} className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 opacity-80" alt="Promo 2" />
+          <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-transparent" />
+          <div className="absolute top-8 left-8 z-10">
+            <span className="text-orange-500 font-bold text-[10px] uppercase tracking-widest mb-1 block">{settings?.promo2Badge || "Trending Now"}</span>
+            <h3 className="text-3xl font-black text-white mb-2 uppercase tracking-tighter">{settings?.promo2Title || "Men's Fashion"}</h3>
+            <p className="text-white/80 mb-4 text-xs font-medium">{settings?.promo2Subtitle || "Flat 50% Off"}</p>
+            <button 
+              onClick={() => {
+                if (settings?.promo2Link) {
+                  const cat = categories.find(c => c.id === settings.promo2Link);
+                  if (cat) setActiveCategory(cat.id);
+                  else {
+                    const prod = products.find(p => p.id === settings.promo2Link);
+                    if (prod) setSelectedProduct(prod);
+                  }
+                } else {
+                  const menCat = categories.find(c => c.name.toLowerCase().includes('men'))?.id;
+                  if (menCat) setActiveCategory(menCat);
+                }
+                document.getElementById('collection-anchor')?.scrollIntoView({ behavior: 'smooth' });
+              }}
+              className="text-white font-bold text-[10px] uppercase tracking-widest flex items-center gap-1 hover:gap-2 transition-all border-b border-white pb-1"
+            >
+              Shop Collection <ChevronRight size={12} />
+            </button>
+          </div>
+        </div>
+
+        {/* Promo 3 */}
+        <div className="relative h-[250px] bg-stone-100 rounded-sm overflow-hidden group">
+          <img src={settings?.promo3Image || "https://images.unsplash.com/photo-1584917865442-de89df76afd3?auto=format&fit=crop&q=80&w=600"} className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" alt="Promo 3" />
+          <div className="absolute top-4 left-4 bg-orange-500 text-white text-[8px] font-bold px-2 py-1 rounded-sm uppercase">{settings?.promo3Badge || "25% Off"}</div>
+          <div className="absolute bottom-6 left-6 bg-white/80 backdrop-blur-sm p-4 rounded-sm border border-stone-100">
+            <h3 className="text-lg font-bold text-stone-900 mb-1">{settings?.promo3Title || "Handbag"}</h3>
+            <button 
+              onClick={() => {
+                if (settings?.promo3Link) {
+                  const cat = categories.find(c => c.id === settings.promo3Link);
+                  if (cat) setActiveCategory(cat.id);
+                  else {
+                    const prod = products.find(p => p.id === settings.promo3Link);
+                    if (prod) setSelectedProduct(prod);
+                  }
+                }
+                document.getElementById('collection-anchor')?.scrollIntoView({ behavior: 'smooth' });
+              }}
+              className="text-orange-500 font-bold text-[9px] uppercase tracking-widest flex items-center gap-1 hover:gap-2 transition-all"
+            >
+              {settings?.promo3Subtitle || "Shop Now"} <ChevronRight size={10} />
+            </button>
+          </div>
+        </div>
+
+        {/* Promo 4 */}
+        <div className="relative h-[250px] bg-stone-100 rounded-sm overflow-hidden group">
+          <img src={settings?.promo4Image || "https://images.unsplash.com/photo-1524592094714-0f0654e20314?auto=format&fit=crop&q=80&w=600"} className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" alt="Promo 4" />
+          <div className="absolute top-4 left-4 bg-orange-500 text-white text-[8px] font-bold px-2 py-1 rounded-sm uppercase">{settings?.promo4Badge || "45% Off"}</div>
+          <div className="absolute bottom-6 left-6 bg-white/80 backdrop-blur-sm p-4 rounded-sm border border-stone-100">
+            <h3 className="text-lg font-bold text-stone-900 mb-1">{settings?.promo4Title || "Watch"}</h3>
+            <button 
+              onClick={() => {
+                if (settings?.promo4Link) {
+                  const cat = categories.find(c => c.id === settings.promo4Link);
+                  if (cat) setActiveCategory(cat.id);
+                  else {
+                    const prod = products.find(p => p.id === settings.promo4Link);
+                    if (prod) setSelectedProduct(prod);
+                  }
+                }
+                document.getElementById('collection-anchor')?.scrollIntoView({ behavior: 'smooth' });
+              }}
+              className="text-orange-500 font-bold text-[9px] uppercase tracking-widest flex items-center gap-1 hover:gap-2 transition-all"
+            >
+              {settings?.promo4Subtitle || "Shop Now"} <ChevronRight size={10} />
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* Featured Products Section */}
+      <section id="collection-anchor" className="max-w-[1400px] mx-auto py-16 px-6">
+        <div className="text-center mb-12">
+          {searchQuery ? (
+            <div className="mb-8">
+              <h2 className="text-2xl md:text-3xl font-bold text-stone-900 mb-2">Search Results</h2>
+              <p className="text-stone-400 text-sm">Showing results for "{searchQuery}"</p>
+              <button 
+                onClick={() => setSearchQuery('')}
+                className="mt-4 text-orange-500 text-[10px] font-bold uppercase tracking-widest hover:underline"
+              >
+                Clear Search
+              </button>
+            </div>
+          ) : (
+            <>
+              <h2 className="text-2xl md:text-3xl font-bold text-stone-900 mb-6">Featured Products</h2>
+              <div className="flex justify-center gap-8 border-b border-stone-100">
+                {['New Arrival', 'Best Selling', 'Top Rated'].map((tab) => (
+                  <button 
+                    key={tab}
+                    onClick={() => setActiveTab(tab.toLowerCase().split(' ')[0] as any)}
+                    className={`pb-4 text-[10px] font-bold uppercase tracking-widest transition-all relative ${activeTab === tab.toLowerCase().split(' ')[0] ? 'text-stone-900' : 'text-stone-400 hover:text-stone-600'}`}
+                  >
+                    {tab}
+                    {activeTab === tab.toLowerCase().split(' ')[0] && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-orange-500" />}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-6">
+          {displayItems.length > 0 ? (
+            displayItems.slice(0, 15).map((item, idx) => (
+              <ProductCard 
+                key={`${item.product.id}-${item.colorName}-${idx}`} 
+                product={item.product} 
+                colorName={item.colorName}
+                variants={item.variants}
+                onClick={() => setSelectedProduct({ ...item.product, initialColor: item.colorName } as any)} 
+              />
+            ))
+          ) : (
+            <div className="col-span-full py-20 text-center">
+              <div className="w-16 h-16 bg-stone-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Search size={24} className="text-stone-300" />
+              </div>
+              <h3 className="text-lg font-bold text-stone-900 mb-2">No products found</h3>
+              <p className="text-stone-400 text-[10px] uppercase tracking-widest font-bold mb-6">Try adjusting your search or filters</p>
+              <button 
+                onClick={() => setSearchQuery('')}
+                className="bg-stone-900 text-white px-8 py-3 rounded-sm font-bold text-[10px] uppercase tracking-widest hover:bg-orange-500 transition-all"
+              >
+                Show All Products
+              </button>
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* Bottom Banners */}
+      <section className="max-w-[1400px] mx-auto py-12 px-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="relative h-[350px] bg-stone-900 rounded-sm overflow-hidden group">
+          <img src={settings?.banner1Image || "https://images.unsplash.com/photo-1488161628813-244768e7f63e?auto=format&fit=crop&q=80&w=800"} className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 opacity-70" alt="Banner 1" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+          <div className="absolute bottom-12 left-12 z-10">
+            <span className="text-orange-500 font-bold text-[10px] uppercase tracking-widest mb-2 block">Weekend Sale</span>
+            <h3 className="text-4xl font-black text-white mb-2 uppercase tracking-tighter">{settings?.banner1Title || "Men's Fashion"}</h3>
+            <p className="text-white/80 font-bold mb-6 uppercase text-[10px] tracking-widest">{settings?.banner1Subtitle || "Flat 70% Off"}</p>
+            <button 
+              onClick={() => {
+                const menCat = categories.find(c => c.name.toLowerCase().includes('men'))?.id;
+                if (menCat) setActiveCategory(menCat);
+                document.getElementById('collection-anchor')?.scrollIntoView({ behavior: 'smooth' });
+              }}
+              className="bg-white text-stone-900 px-10 py-3 rounded-sm font-bold text-[10px] uppercase tracking-widest hover:bg-orange-500 hover:text-white transition-all"
+            >
+              Shop Now
+            </button>
+          </div>
+        </div>
+        <div className="relative h-[350px] bg-stone-900 rounded-sm overflow-hidden group">
+          <img src={settings?.banner2Image || "https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&q=80&w=800"} className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 opacity-70" alt="Banner 2" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+          <div className="absolute bottom-12 left-12 z-10">
+            <span className="text-orange-500 font-bold text-[10px] uppercase tracking-widest mb-2 block">Fashion Style</span>
+            <h3 className="text-4xl font-black text-white mb-2 uppercase tracking-tighter">{settings?.banner2Title || "Women's Wear"}</h3>
+            <p className="text-white/80 font-bold mb-6 uppercase text-[10px] tracking-widest">{settings?.banner2Subtitle || "Min. 35-70% Off"}</p>
+            <button 
+              onClick={() => {
+                const womenCat = categories.find(c => c.name.toLowerCase().includes('women'))?.id;
+                if (womenCat) setActiveCategory(womenCat);
+                document.getElementById('collection-anchor')?.scrollIntoView({ behavior: 'smooth' });
+              }}
+              className="bg-white text-stone-900 px-10 py-3 rounded-sm font-bold text-[10px] uppercase tracking-widest hover:bg-orange-500 hover:text-white transition-all"
+            >
+              Shop Now
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* Featured Categories */}
+      <section id="categories" className="max-w-[1400px] mx-auto py-16 px-6 text-center">
+        <h2 className="text-2xl font-bold text-stone-900 mb-12">Featured Categories</h2>
+        <div className="flex flex-wrap justify-center gap-12">
+          {categories
+            .sort((a, b) => {
+              const aName = a.name.toLowerCase();
+              const bName = b.name.toLowerCase();
+              if (aName.includes('men') || aName.includes('women')) return -1;
+              if (bName.includes('men') || bName.includes('women')) return 1;
+              return 0;
+            })
+            .slice(0, 8)
+            .map(cat => (
+            <button 
+              key={cat.id} 
+              onClick={() => {
+                setActiveCategory(cat.id);
+                document.getElementById('collection-anchor')?.scrollIntoView({ behavior: 'smooth' });
+              }} 
+              className="group flex flex-col items-center gap-4"
+            >
+              <div className="w-24 h-24 rounded-full bg-stone-50 border border-stone-100 flex items-center justify-center group-hover:border-orange-500 transition-all overflow-hidden">
+                <img src={`https://picsum.photos/seed/${cat.slug}/200`} className="w-full h-full object-cover group-hover:scale-110 transition-transform" alt={cat.name} />
+              </div>
+              <span className="text-[10px] font-bold uppercase tracking-widest text-stone-400 group-hover:text-stone-900">{cat.name}</span>
             </button>
           ))}
         </div>
       </section>
 
-      {/* Product Grid - Denser Full Width */}
-      <section className="px-4 md:px-10 mt-6 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 gap-3 md:gap-4 w-full">
-        {displayItems.map((item, idx) => (
-          <ProductCard 
-            key={`${item.product.id}-${item.colorName}-${idx}`} 
-            product={item.product} 
-            colorName={item.colorName}
-            variants={item.variants}
-            onClick={() => setSelectedProduct({ ...item.product, initialColor: item.colorName } as any)} 
-          />
-        ))}
-      </section>
-
       {selectedProduct && <ProductModal product={selectedProduct} onClose={() => setSelectedProduct(null)} addToCart={addToCart} />}
-      
-      <style>{`
-        @keyframes scroll {
-          0% { transform: translateX(0); }
-          100% { transform: translateX(-50%); }
-        }
-      `}</style>
     </div>
   );
 };
 
-const SparkleIcon = () => (
-  <svg width="6" height="6" viewBox="0 0 24 24" fill="currentColor" className="text-[#F2994A]">
-    <path d="M12 0L14.59 9.41L24 12L14.59 14.59L12 24L9.41 14.59L0 12L9.41 9.41L12 0Z" />
-  </svg>
-);
-
 const ProductCard: React.FC<{ product: Product, colorName: string, variants: ProductVariant[], onClick: () => void }> = ({ product, colorName, variants, onClick }) => {
   const isComingSoon = variants?.every(v => v.isComingSoon) || false;
   const hasInStock = variants?.some(v => v.stock > 0 && !v.isComingSoon);
-  const hasPreOrder = variants?.some(v => v.stock === 0 && !!v.leadTime && !v.isComingSoon);
-
-  // Use color-specific image if available, otherwise fallback to product main image
   const displayImage = variants[0]?.images?.[0] || product.images[0];
+  const minPrice = Math.min(...variants.map(v => v.price));
+  const maxPrice = Math.max(...variants.map(v => v.price));
 
   return (
-    <div 
-      className="group bg-white rounded-lg overflow-hidden cursor-pointer transition-all duration-300 border border-stone-100 hover:shadow-lg"
-      onClick={onClick}
-    >
-      <div className="relative aspect-[3/4] md:aspect-[4/5] overflow-hidden bg-stone-50">
+    <div className="group cursor-pointer" onClick={onClick}>
+      <div className="relative aspect-[3/4] overflow-hidden bg-[#f9f9f9] rounded-sm mb-4">
         <img 
           src={optimizeImage(displayImage, 500)} 
-          alt={`${product.name} - ${colorName}`}
+          alt={product.name}
           className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
         />
-        <div className="absolute top-2 left-2 flex flex-col gap-0.5">
-          {isComingSoon && <span className="bg-[#0052D4] text-white text-[5px] md:text-[6px] font-bold px-1 py-0.5 rounded tracking-widest uppercase">Soon</span>}
-          {hasInStock && <span className="bg-green-600 text-white text-[5px] md:text-[6px] font-bold px-1 py-0.5 rounded tracking-widest uppercase flex items-center gap-0.5 shadow-sm"><Zap size={5} fill="currentColor" /> Ready</span>}
-          {hasPreOrder && !hasInStock && <span className="bg-[#F2994A] text-white text-[5px] md:text-[6px] font-bold px-1 py-0.5 rounded tracking-widest uppercase flex items-center gap-0.5 shadow-sm"><CalendarClock size={5} /> Pre</span>}
+        {/* Badges */}
+        <div className="absolute top-3 left-3 flex flex-col gap-1">
+          {isComingSoon && <span className="bg-stone-900 text-white text-[7px] font-bold px-2 py-0.5 rounded-sm uppercase tracking-widest">Soon</span>}
+          {variants[0].stock < 5 && hasInStock && <span className="bg-orange-500 text-white text-[7px] font-bold px-2 py-0.5 rounded-sm uppercase tracking-widest">Featured</span>}
+          {variants[0].price < 100 && <span className="bg-green-600 text-white text-[7px] font-bold px-2 py-0.5 rounded-sm uppercase tracking-widest">15% Off</span>}
         </div>
-        <div className="absolute bottom-2 right-2">
-           <div className="w-3 h-3 rounded-full border border-white shadow-sm" style={{ backgroundColor: variants[0].hexColor }} title={colorName} />
+        {/* Quick Actions */}
+        <div className="absolute bottom-0 left-0 right-0 p-4 translate-y-full group-hover:translate-y-0 transition-transform duration-300 bg-white/90 backdrop-blur-sm flex justify-center gap-4">
+          <button 
+            onClick={(e) => { e.stopPropagation(); onClick(); }}
+            className="p-2 text-stone-600 hover:text-orange-500 transition-colors"
+          >
+            <Search size={16} />
+          </button>
+          <button 
+            onClick={(e) => { e.stopPropagation(); alert("Added to Wishlist!"); }}
+            className="p-2 text-stone-600 hover:text-red-500 transition-colors"
+          >
+            <Heart size={16} />
+          </button>
+          <button 
+            onClick={(e) => { e.stopPropagation(); onClick(); }}
+            className="p-2 text-stone-600 hover:text-orange-500 transition-colors"
+          >
+            <ShoppingBag size={16} />
+          </button>
         </div>
       </div>
-      <div className="p-2 md:p-2.5">
-        <h3 className="font-serif font-bold text-stone-900 text-[10px] md:text-[11px] group-hover:text-[#0052D4] transition-colors line-clamp-1">
-          {product.name} {colorName && colorName !== 'Standard' && colorName !== 'null' && <span className="text-stone-400 font-sans font-normal ml-1">/ {colorName}</span>}
-        </h3>
-        <div className="flex items-end justify-between mt-1">
-          <span className="font-bold text-stone-900 text-[9px] md:text-[10px]">GH₵ {variants[0].price.toLocaleString()}</span>
+      <div className="space-y-1">
+        <p className="text-[9px] text-stone-400 uppercase font-bold tracking-widest">{product.categoryId}</p>
+        <h3 className="font-bold text-stone-900 text-xs group-hover:text-orange-500 transition-colors line-clamp-1">{product.name}</h3>
+        <div className="flex items-center gap-0.5 text-orange-400">
+          {[1, 2, 3, 4, 5].map(i => <Star key={i} size={10} fill={i <= 4 ? "currentColor" : "none"} />)}
+          <span className="text-[9px] text-stone-400 ml-1">(2)</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="font-bold text-stone-900 text-xs">
+            GH₵ {minPrice === maxPrice ? minPrice.toLocaleString() : `${minPrice.toLocaleString()} - GH₵ ${maxPrice.toLocaleString()}`}
+          </span>
         </div>
       </div>
     </div>
@@ -356,7 +615,7 @@ const ProductModal = ({ product, onClose, addToCart }: any) => {
                           }`}
                         >
                           {s.size}
-                          {isSelected && <div className="absolute -top-1 -right-1 w-3 h-3 bg-[#0052D4] rounded-full flex items-center justify-center border border-white"><Check size={6} className="text-white" /></div>}
+                          {isSelected && <div className="absolute -top-1 -right-1 w-3 h-3 bg-orange-500 rounded-full flex items-center justify-center border border-white"><Check size={6} className="text-white" /></div>}
                         </button>
                       );
                     })}
@@ -371,7 +630,7 @@ const ProductModal = ({ product, onClose, addToCart }: any) => {
                 onClick={handleAddToCart} 
                 className={`w-full h-12 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-xl ${
                   canPurchase 
-                  ? 'bg-[#0052D4] text-white hover:bg-[#004aad] active:scale-95' 
+                  ? 'bg-stone-900 text-white hover:bg-orange-500 active:scale-95' 
                   : 'bg-stone-100 text-stone-300 cursor-not-allowed'
                 }`}
               >
