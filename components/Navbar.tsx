@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { ShoppingCart, LogOut, ShieldCheck, User as UserIcon, Package } from 'lucide-react';
+import { ShoppingCart, LogOut, ShieldCheck, User as UserIcon, Package, Search, Heart, Menu, Phone, Mail, ChevronDown } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 import AdminGate from './AdminGate';
 import { signOut } from 'firebase/auth';
@@ -12,8 +12,9 @@ interface NavbarProps {
 }
 
 const Navbar: React.FC<NavbarProps> = ({ navigate }) => {
-  const { user, profile, totalItems, setIsCartOpen, setIsAuthOpen } = useAppContext();
+  const { user, profile, totalItems, setIsCartOpen, setIsAuthOpen, searchQuery, setSearchQuery, cartTotal } = useAppContext();
   const [isAdminGateOpen, setIsAdminGateOpen] = useState(false);
+  const [isSearchVisible, setIsSearchVisible] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
 
@@ -45,92 +46,128 @@ const Navbar: React.FC<NavbarProps> = ({ navigate }) => {
   };
 
   return (
-    <nav className="sticky top-0 z-[100] bg-white/90 backdrop-blur-md border-b border-stone-100 w-full h-14 flex items-center">
-      <div className="w-full px-4 md:px-10 flex justify-between items-center">
-        <button
-          onClick={() => safeNavigate('store')}
-          className="flex items-center gap-1.5 group"
-        >
-          <div className="w-6 h-6 bg-[#0052D4] rounded-lg flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
-             <ShoppingCart size={14} className="text-white" fill="white" />
-          </div>
-          <span className="text-lg font-bold tracking-tighter font-serif text-[#0052D4]">
-            Cartly
-          </span>
-        </button>
+    <header className="w-full z-[100] bg-white">
+      {/* Main Header */}
+      <nav className="sticky top-0 bg-white border-b border-stone-100 w-full h-20 flex items-center shadow-sm">
+        <div className="max-w-[1400px] mx-auto w-full px-4 md:px-10 flex justify-between items-center">
+          {/* Mobile Menu Toggle */}
+          <button className="md:hidden p-2 text-stone-900">
+            <Menu size={20} />
+          </button>
 
-        <div className="hidden md:flex space-x-6 text-[8px] font-bold uppercase tracking-widest text-stone-400">
-          <button onClick={() => safeNavigate('store')} className="hover:text-stone-900 transition">
-            Store
+          {/* Logo */}
+          <button
+            onClick={() => { safeNavigate('store'); setSearchQuery(''); }}
+            className="flex items-center gap-1.5 group"
+          >
+            <span className="text-2xl font-black tracking-tighter text-stone-900 uppercase">
+              Cartly<span className="text-orange-500">.</span>
+            </span>
           </button>
-          <button onClick={() => safeNavigate('momo-guide')} className="hover:text-stone-900 transition">
-            Payment Guide
-          </button>
-          {user && (
-            <button
-              onClick={() => safeNavigate('orders')}
-              className="hover:text-stone-900 transition flex items-center gap-1.5"
-            >
-              <Package size={10} /> Orders
+
+          {/* Desktop Navigation */}
+          <div className="hidden md:flex space-x-8 text-[10px] font-bold uppercase tracking-widest text-stone-900">
+            <button onClick={() => { safeNavigate('store'); setSearchQuery(''); }} className="hover:text-orange-500 transition relative group">
+              Home
+              <div className="absolute -bottom-1 left-0 w-0 h-0.5 bg-orange-500 group-hover:w-full transition-all" />
             </button>
-          )}
-        </div>
+            <button onClick={() => { safeNavigate('store'); setSearchQuery(''); }} className="hover:text-orange-500 transition relative group">
+              Shop <ChevronDown size={10} className="inline ml-0.5" />
+              <div className="absolute -bottom-1 left-0 w-0 h-0.5 bg-orange-500 group-hover:w-full transition-all" />
+            </button>
+            <button onClick={() => safeNavigate('momo-guide')} className="hover:text-orange-500 transition relative group">
+              Payment Guide
+              <div className="absolute -bottom-1 left-0 w-0 h-0.5 bg-orange-500 group-hover:w-full transition-all" />
+            </button>
+            {user && (
+              <button
+                onClick={() => safeNavigate('orders')}
+                className="hover:text-orange-500 transition relative group flex items-center gap-1"
+              >
+                Orders
+                <div className="absolute -bottom-1 left-0 w-0 h-0.5 bg-orange-500 group-hover:w-full transition-all" />
+              </button>
+            )}
+          </div>
 
-        <div className="flex items-center gap-2">
-          {user ? (
-            <div className="flex items-center gap-2">
-              <div className="hidden md:block text-right mr-1">
-                <p className="text-[6px] font-bold uppercase tracking-widest text-stone-400 leading-none">
-                  {profile?.role === 'ADMIN' ? 'Administrator' : 'Collector'}
-                </p>
-                <p className="text-[9px] font-bold text-stone-900 leading-tight">
-                  {profile?.fullName?.split(' ')[0] || 'User'}
-                </p>
-              </div>
-
-              {profile?.role === 'ADMIN' && (
+          {/* Icons */}
+          <div className="flex items-center gap-4">
+            <div className={`flex items-center bg-stone-50 rounded-full px-4 py-1.5 transition-all duration-300 ${isSearchVisible ? 'w-48 md:w-64 opacity-100' : 'w-0 opacity-0 overflow-hidden'}`}>
+              <Search size={14} className="text-stone-400 shrink-0" />
+              <input 
+                type="text" 
+                placeholder="Search products..." 
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  if (e.target.value) {
+                    document.getElementById('collection-anchor')?.scrollIntoView({ behavior: 'smooth' });
+                  }
+                }}
+                className="bg-transparent border-none outline-none text-[10px] font-bold text-stone-900 ml-2 w-full"
+              />
+            </div>
+            <button 
+              onClick={() => setIsSearchVisible(!isSearchVisible)}
+              className="p-2 text-stone-900 hover:text-orange-500 transition-all"
+            >
+              <Search size={20} />
+            </button>
+            
+            <div className="hidden sm:flex items-center gap-1">
+              {user ? (
+                <div className="flex items-center gap-3">
+                  <div className="text-right hidden lg:block">
+                    <p className="text-[9px] font-bold text-stone-900 leading-tight">
+                      {profile?.fullName?.split(' ')[0] || 'User'}
+                    </p>
+                    <p className="text-[7px] font-bold uppercase tracking-widest text-stone-400 leading-none">
+                      {profile?.role === 'ADMIN' ? 'Admin' : 'Account'}
+                    </p>
+                  </div>
+                  <button onClick={() => profile?.role === 'ADMIN' ? safeNavigate('admin') : null} className="p-2 text-stone-900 hover:text-orange-500 transition-all relative">
+                    <UserIcon size={20} />
+                    {profile?.role === 'ADMIN' && <div className="absolute top-1 right-1 w-2 h-2 bg-orange-500 rounded-full border-2 border-white" />}
+                  </button>
+                  <button onClick={handleLogout} className="p-2 text-stone-900 hover:text-red-500 transition-all">
+                    <LogOut size={18} />
+                  </button>
+                </div>
+              ) : (
                 <button
-                  onClick={() => safeNavigate('admin')}
-                  className="p-1.5 rounded-lg text-stone-500 hover:bg-stone-50 transition-all"
-                  title="Admin Dashboard"
+                  onClick={() => setIsAuthOpen(true)}
+                  className="p-2 text-stone-900 hover:text-orange-500 transition-all"
                 >
-                  <ShieldCheck size={16} className="text-[#F2994A]" />
+                  <UserIcon size={20} />
                 </button>
               )}
-
-              <button
-                onClick={handleLogout}
-                className="p-1.5 text-stone-500 hover:bg-stone-50 rounded-lg transition-all"
-                title="Logout"
-              >
-                <LogOut size={16} />
-              </button>
             </div>
-          ) : (
-            <button
-              onClick={() => setIsAuthOpen(true)}
-              className="flex items-center gap-1 px-2.5 py-1 text-stone-900 bg-stone-100 hover:bg-stone-200 rounded-lg transition-all font-bold text-[8px] uppercase tracking-widest"
-            >
-              <UserIcon size={10} />
-              <span>Login</span>
+
+            <button className="hidden sm:block p-2 text-stone-900 hover:text-orange-500 transition-all relative">
+              <Heart size={20} />
+              <span className="absolute top-1 right-1 h-3.5 w-3.5 bg-orange-500 text-white text-[7px] font-bold flex items-center justify-center rounded-full border border-white">0</span>
             </button>
-          )}
 
-          <div className="w-px h-3 bg-stone-100 mx-1" />
-
-          <button
-            onClick={() => setIsCartOpen(true)}
-            className="relative p-1.5 text-stone-900 hover:bg-stone-100 rounded-lg transition-all"
-          >
-            <ShoppingCart size={16} />
-            {totalItems > 0 && (
-              <span className="absolute -top-1 -right-1 h-3.5 w-3.5 bg-[#F2994A] text-white text-[7px] font-bold flex items-center justify-center rounded-full border border-white">
-                {totalItems}
-              </span>
-            )}
-          </button>
+            <button
+              onClick={() => setIsCartOpen(true)}
+              className="relative p-2 text-stone-900 hover:text-orange-500 transition-all flex items-center gap-2"
+            >
+              <div className="relative">
+                <ShoppingCart size={20} />
+                {totalItems > 0 && (
+                  <span className="absolute -top-1 -right-1 h-3.5 w-3.5 bg-orange-500 text-white text-[7px] font-bold flex items-center justify-center rounded-full border border-white">
+                    {totalItems}
+                  </span>
+                )}
+              </div>
+              <div className="hidden lg:block text-left">
+                <p className="text-[7px] font-bold uppercase tracking-widest text-stone-400 leading-none">Your Cart</p>
+                <p className="text-[9px] font-bold text-stone-900 leading-tight">GH₵ {cartTotal.toLocaleString()}</p>
+              </div>
+            </button>
+          </div>
         </div>
-      </div>
+      </nav>
 
       {isAdminGateOpen && user && (
         <AdminGate
@@ -139,7 +176,7 @@ const Navbar: React.FC<NavbarProps> = ({ navigate }) => {
           onClose={() => setIsAdminGateOpen(false)}
         />
       )}
-    </nav>
+    </header>
   );
 };
 

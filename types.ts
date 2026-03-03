@@ -18,6 +18,38 @@ export interface StoreSettings {
   id: string;
   tickerText: string;
   isTickerActive: boolean;
+  heroTitle?: string;
+  heroSubtitle?: string;
+  heroImage?: string;
+  heroCtaText?: string;
+  heroSecondaryCtaText?: string;
+  banner1Title?: string;
+  banner1Subtitle?: string;
+  banner1Image?: string;
+  banner2Title?: string;
+  banner2Subtitle?: string;
+  banner2Image?: string;
+  // Promo Grid
+  promo1Title?: string;
+  promo1Subtitle?: string;
+  promo1Image?: string;
+  promo1Badge?: string;
+  promo1Link?: string;
+  promo2Title?: string;
+  promo2Subtitle?: string;
+  promo2Image?: string;
+  promo2Badge?: string;
+  promo2Link?: string;
+  promo3Title?: string;
+  promo3Subtitle?: string;
+  promo3Image?: string;
+  promo3Badge?: string;
+  promo3Link?: string;
+  promo4Title?: string;
+  promo4Subtitle?: string;
+  promo4Image?: string;
+  promo4Badge?: string;
+  promo4Link?: string;
 }
 
 export interface Category {

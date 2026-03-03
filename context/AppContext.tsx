@@ -20,6 +20,8 @@ interface AppContextType {
   setIsCartOpen: (open: boolean) => void;
   isAuthOpen: boolean;
   setIsAuthOpen: (open: boolean) => void;
+  searchQuery: string;
+  setSearchQuery: (query: string) => void;
   addToCart: (productId: string, variantId: string, quantity: number) => void;
   removeFromCart: (variantId: string) => void;
   updateCartQuantity: (variantId: string, delta: number) => void;
@@ -38,6 +40,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     const unsubscribe = onSnapshot(doc(db, 'settings', 'store_config'), (snap) => {
@@ -160,6 +163,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       cart, cartTotal, totalItems,
       isCartOpen, setIsCartOpen,
       isAuthOpen, setIsAuthOpen,
+      searchQuery, setSearchQuery,
       addToCart, removeFromCart, updateCartQuantity, clearCart,
     }}>
       {children}
