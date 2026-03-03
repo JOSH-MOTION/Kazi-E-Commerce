@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { ShoppingCart, LogOut, ShieldCheck, User as UserIcon, Package, Search, Heart, Menu, Phone, Mail, ChevronDown } from 'lucide-react';
+import { ShoppingCart, LogOut, ShieldCheck, User as UserIcon, Package, Search, Heart, Menu, Phone, Mail, ChevronDown, X } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 import AdminGate from './AdminGate';
 import { signOut } from 'firebase/auth';
@@ -15,10 +15,12 @@ const Navbar: React.FC<NavbarProps> = ({ navigate }) => {
   const { user, profile, totalItems, setIsCartOpen, setIsAuthOpen, searchQuery, setSearchQuery, cartTotal } = useAppContext();
   const [isAdminGateOpen, setIsAdminGateOpen] = useState(false);
   const [isSearchVisible, setIsSearchVisible] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
 
   const safeNavigate = (path: string) => {
+    setIsMobileMenuOpen(false);
     if (navigate) {
       navigate(path);
       return;
@@ -51,7 +53,10 @@ const Navbar: React.FC<NavbarProps> = ({ navigate }) => {
       <nav className="sticky top-0 bg-white border-b border-stone-100 w-full h-20 flex items-center shadow-sm">
         <div className="max-w-[1400px] mx-auto w-full px-4 md:px-10 flex justify-between items-center">
           {/* Mobile Menu Toggle */}
-          <button className="md:hidden p-2 text-stone-900">
+          <button 
+            onClick={() => setIsMobileMenuOpen(true)}
+            className="md:hidden p-2 text-stone-900 hover:text-orange-500 transition-colors"
+          >
             <Menu size={20} />
           </button>
 
@@ -175,6 +180,78 @@ const Navbar: React.FC<NavbarProps> = ({ navigate }) => {
           onSuccess={() => { setIsAdminGateOpen(false); safeNavigate('admin'); }}
           onClose={() => setIsAdminGateOpen(false)}
         />
+      )}
+
+      {/* Mobile Menu Drawer */}
+      {isMobileMenuOpen && (
+        <div className="fixed inset-0 z-[200] md:hidden">
+          <div className="absolute inset-0 bg-stone-950/60 backdrop-blur-sm" onClick={() => setIsMobileMenuOpen(false)} />
+          <div className="absolute inset-y-0 left-0 w-[280px] bg-white shadow-2xl animate-in slide-in-from-left duration-300 flex flex-col">
+            <div className="p-6 border-b border-stone-100 flex justify-between items-center">
+              <span className="text-xl font-black tracking-tighter text-stone-900 uppercase">
+                Cartly<span className="text-orange-500">.</span>
+              </span>
+              <button onClick={() => setIsMobileMenuOpen(false)} className="p-2 text-stone-400 hover:text-stone-900">
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="flex-grow overflow-y-auto p-6 space-y-8">
+              <div className="space-y-4">
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-stone-400">Navigation</p>
+                <div className="flex flex-col gap-4">
+                  <button onClick={() => safeNavigate('store')} className="text-left font-bold text-stone-900 hover:text-orange-500 transition-colors">Home</button>
+                  <button onClick={() => safeNavigate('store')} className="text-left font-bold text-stone-900 hover:text-orange-500 transition-colors">Shop</button>
+                  <button onClick={() => safeNavigate('momo-guide')} className="text-left font-bold text-stone-900 hover:text-orange-500 transition-colors">Payment Guide</button>
+                  {user && (
+                    <button onClick={() => safeNavigate('orders')} className="text-left font-bold text-stone-900 hover:text-orange-500 transition-colors">My Orders</button>
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-stone-400">Account</p>
+                <div className="flex flex-col gap-4">
+                  {user ? (
+                    <>
+                      <div className="flex items-center gap-3 p-3 bg-stone-50 rounded-xl">
+                        <div className="w-10 h-10 rounded-full bg-stone-200 flex items-center justify-center text-stone-500">
+                          <UserIcon size={20} />
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-stone-900">{profile?.fullName || 'User'}</p>
+                          <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest">{profile?.role || 'Customer'}</p>
+                        </div>
+                      </div>
+                      {profile?.role === 'ADMIN' && (
+                        <button onClick={() => safeNavigate('admin')} className="text-left font-bold text-orange-500 flex items-center gap-2">
+                          <ShieldCheck size={18} /> Admin Panel
+                        </button>
+                      )}
+                      <button onClick={handleLogout} className="text-left font-bold text-red-500 flex items-center gap-2">
+                        <LogOut size={18} /> Sign Out
+                      </button>
+                    </>
+                  ) : (
+                    <button 
+                      onClick={() => { setIsMobileMenuOpen(false); setIsAuthOpen(true); }}
+                      className="w-full bg-stone-900 text-white py-4 rounded-xl font-bold flex items-center justify-center gap-2"
+                    >
+                      <UserIcon size={18} /> Sign In / Join
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6 border-t border-stone-100 bg-stone-50">
+              <div className="flex items-center gap-4 text-stone-400">
+                <Phone size={16} />
+                <span className="text-xs font-bold">Support: 233 55 123 4567</span>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </header>
   );

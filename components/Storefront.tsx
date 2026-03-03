@@ -65,50 +65,53 @@ const Storefront: React.FC<StorefrontProps> = ({ addToCart }) => {
 
   return (
     <div className="w-full bg-white">
-      {/* Hero Section - Slider Style */}
-      <section className="relative h-[500px] md:h-[700px] bg-[#f3f4f6] overflow-hidden">
-        <div className="max-w-[1400px] mx-auto h-full flex flex-col md:flex-row items-center px-6 md:px-12 relative">
-          <div className="w-full md:w-1/2 pt-12 md:pt-0 z-20 animate-in slide-in-from-left duration-700">
-            <span className="text-orange-500 font-serif italic text-xl md:text-2xl mb-2 block drop-shadow-sm">Season Sale</span>
-            <h1 className="text-4xl md:text-8xl font-black text-stone-900 mb-4 leading-[0.9] uppercase tracking-tighter drop-shadow-sm">
+      {/* Hero Section - Immersive Background Style */}
+      <section className="relative h-[500px] md:h-[700px] bg-stone-900 overflow-hidden">
+        {/* Background Image */}
+        <div className="absolute inset-0 z-0">
+          <img 
+            key={settings?.heroImage || 'default'}
+            src={settings?.heroImage || "https://images.unsplash.com/photo-1519085185758-2ad98035527e?auto=format&fit=crop&q=80&w=1000"} 
+            className="w-full h-full object-cover animate-in fade-in duration-1000"
+            alt="Hero Background"
+          />
+          {/* Dark Overlay for Readability */}
+          <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/40 to-transparent z-10" />
+        </div>
+
+        <div className="max-w-[1400px] mx-auto h-full flex flex-col justify-center px-6 md:px-12 relative z-20">
+          <div className="w-full md:w-2/3 lg:w-1/2 animate-in slide-in-from-left duration-700">
+            <span className="text-orange-500 font-serif italic text-xl md:text-2xl mb-4 block">Season Sale</span>
+            <h1 className="text-5xl md:text-8xl font-black text-white mb-6 leading-[0.9] uppercase tracking-tighter">
               {settings?.heroTitle?.split(' ').map((word, i) => (
                 <React.Fragment key={i}>
                   {word} {i === 0 && <br />}
                 </React.Fragment>
               )) || <>MEN'S <br /> FASHION</>}
             </h1>
-            <p className="text-lg md:text-xl text-stone-600 mb-8 font-medium max-w-md drop-shadow-sm">{settings?.heroSubtitle || "Min. 35-70% Off"}</p>
-            <div className="flex gap-4">
+            <p className="text-lg md:text-xl text-white/90 mb-10 font-medium max-w-md">{settings?.heroSubtitle || "Min. 35-70% Off"}</p>
+            <div className="flex flex-wrap gap-4">
               <button 
                 onClick={() => document.getElementById('collection-anchor')?.scrollIntoView({ behavior: 'smooth' })}
-                className="bg-stone-900 text-white px-10 py-4 rounded-sm font-bold text-xs uppercase tracking-widest hover:bg-orange-500 transition-all shadow-xl shadow-black/10"
+                className="bg-orange-500 text-white px-10 py-4 rounded-sm font-bold text-xs uppercase tracking-widest hover:bg-white hover:text-stone-900 transition-all shadow-2xl shadow-orange-500/20"
               >
                 {settings?.heroCtaText || "Shop Now"}
               </button>
               <button 
                 onClick={() => document.getElementById('categories')?.scrollIntoView({ behavior: 'smooth' })}
-                className="bg-white/80 backdrop-blur-sm border border-stone-200 text-stone-900 px-10 py-4 rounded-sm font-bold text-xs uppercase tracking-widest hover:bg-white transition-all"
+                className="bg-white/10 backdrop-blur-md border border-white/20 text-white px-10 py-4 rounded-sm font-bold text-xs uppercase tracking-widest hover:bg-white hover:text-stone-900 transition-all"
               >
                 {settings?.heroSecondaryCtaText || "Read More"}
               </button>
             </div>
           </div>
-          <div className="absolute right-0 bottom-0 w-full md:w-[60%] h-full z-10 pointer-events-none">
-            <div className="relative w-full h-full flex items-end justify-end">
-              <img 
-                src={settings?.heroImage || "https://images.unsplash.com/photo-1519085185758-2ad98035527e?auto=format&fit=crop&q=80&w=1000"} 
-                className="h-[95%] md:h-[110%] w-auto object-contain object-bottom animate-in fade-in zoom-in-95 duration-1000 select-none"
-                alt="Hero Model"
-              />
-              {/* Subtle gradient overlay to blend image bottom */}
-              <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-[#f3f4f6] to-transparent z-20" />
-            </div>
-          </div>
         </div>
-        {/* Slider Dots */}
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2 z-30">
-          <div className="w-3 h-3 rounded-full bg-orange-500 border-2 border-white shadow-sm" />
-          <div className="w-3 h-3 rounded-full bg-stone-300 border-2 border-white shadow-sm" />
+        
+        {/* Slider Dots - Decorative */}
+        <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex gap-3 z-30">
+          <div className="w-12 h-1 bg-orange-500 rounded-full shadow-sm" />
+          <div className="w-12 h-1 bg-white/20 rounded-full shadow-sm" />
+          <div className="w-12 h-1 bg-white/20 rounded-full shadow-sm" />
         </div>
       </section>
 
@@ -141,6 +144,68 @@ const Storefront: React.FC<StorefrontProps> = ({ addToCart }) => {
             <h4 className="font-bold text-sm text-stone-900">Online Support</h4>
             <p className="text-[10px] text-stone-400 uppercase font-bold tracking-widest">24/7 Dedicated Support</p>
           </div>
+        </div>
+      </section>
+
+      {/* Featured Products Section */}
+      <section id="collection-anchor" className="max-w-[1400px] mx-auto py-16 px-6">
+        <div className="text-center mb-12">
+          {searchQuery ? (
+            <div className="mb-8">
+              <h2 className="text-2xl md:text-3xl font-bold text-stone-900 mb-2">Search Results</h2>
+              <p className="text-stone-400 text-sm">Showing results for "{searchQuery}"</p>
+              <button 
+                onClick={() => setSearchQuery('')}
+                className="mt-4 text-orange-500 text-[10px] font-bold uppercase tracking-widest hover:underline"
+              >
+                Clear Search
+              </button>
+            </div>
+          ) : (
+            <>
+              <h2 className="text-2xl md:text-3xl font-bold text-stone-900 mb-6">Featured Products</h2>
+              <div className="flex justify-center gap-8 border-b border-stone-100">
+                {['New Arrival', 'Best Selling', 'Top Rated'].map((tab) => (
+                  <button 
+                    key={tab}
+                    onClick={() => setActiveTab(tab.toLowerCase().split(' ')[0] as any)}
+                    className={`pb-4 text-[10px] font-bold uppercase tracking-widest transition-all relative ${activeTab === tab.toLowerCase().split(' ')[0] ? 'text-stone-900' : 'text-stone-400 hover:text-stone-600'}`}
+                  >
+                    {tab}
+                    {activeTab === tab.toLowerCase().split(' ')[0] && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-orange-500" />}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-6">
+          {displayItems.length > 0 ? (
+            displayItems.slice(0, 15).map((item, idx) => (
+              <ProductCard 
+                key={`${item.product.id}-${item.colorName}-${idx}`} 
+                product={item.product} 
+                colorName={item.colorName}
+                variants={item.variants}
+                onClick={() => setSelectedProduct({ ...item.product, initialColor: item.colorName } as any)} 
+              />
+            ))
+          ) : (
+            <div className="col-span-full py-20 text-center">
+              <div className="w-16 h-16 bg-stone-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Search size={24} className="text-stone-300" />
+              </div>
+              <h3 className="text-lg font-bold text-stone-900 mb-2">No products found</h3>
+              <p className="text-stone-400 text-[10px] uppercase tracking-widest font-bold mb-6">Try adjusting your search or filters</p>
+              <button 
+                onClick={() => setSearchQuery('')}
+                className="bg-stone-900 text-white px-8 py-3 rounded-sm font-bold text-[10px] uppercase tracking-widest hover:bg-orange-500 transition-all"
+              >
+                Show All Products
+              </button>
+            </div>
+          )}
         </div>
       </section>
 
@@ -256,68 +321,6 @@ const Storefront: React.FC<StorefrontProps> = ({ addToCart }) => {
               {settings?.promo4Subtitle || "Shop Now"} <ChevronRight size={10} />
             </button>
           </div>
-        </div>
-      </section>
-
-      {/* Featured Products Section */}
-      <section id="collection-anchor" className="max-w-[1400px] mx-auto py-16 px-6">
-        <div className="text-center mb-12">
-          {searchQuery ? (
-            <div className="mb-8">
-              <h2 className="text-2xl md:text-3xl font-bold text-stone-900 mb-2">Search Results</h2>
-              <p className="text-stone-400 text-sm">Showing results for "{searchQuery}"</p>
-              <button 
-                onClick={() => setSearchQuery('')}
-                className="mt-4 text-orange-500 text-[10px] font-bold uppercase tracking-widest hover:underline"
-              >
-                Clear Search
-              </button>
-            </div>
-          ) : (
-            <>
-              <h2 className="text-2xl md:text-3xl font-bold text-stone-900 mb-6">Featured Products</h2>
-              <div className="flex justify-center gap-8 border-b border-stone-100">
-                {['New Arrival', 'Best Selling', 'Top Rated'].map((tab) => (
-                  <button 
-                    key={tab}
-                    onClick={() => setActiveTab(tab.toLowerCase().split(' ')[0] as any)}
-                    className={`pb-4 text-[10px] font-bold uppercase tracking-widest transition-all relative ${activeTab === tab.toLowerCase().split(' ')[0] ? 'text-stone-900' : 'text-stone-400 hover:text-stone-600'}`}
-                  >
-                    {tab}
-                    {activeTab === tab.toLowerCase().split(' ')[0] && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-orange-500" />}
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
-        </div>
-
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-6">
-          {displayItems.length > 0 ? (
-            displayItems.slice(0, 15).map((item, idx) => (
-              <ProductCard 
-                key={`${item.product.id}-${item.colorName}-${idx}`} 
-                product={item.product} 
-                colorName={item.colorName}
-                variants={item.variants}
-                onClick={() => setSelectedProduct({ ...item.product, initialColor: item.colorName } as any)} 
-              />
-            ))
-          ) : (
-            <div className="col-span-full py-20 text-center">
-              <div className="w-16 h-16 bg-stone-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Search size={24} className="text-stone-300" />
-              </div>
-              <h3 className="text-lg font-bold text-stone-900 mb-2">No products found</h3>
-              <p className="text-stone-400 text-[10px] uppercase tracking-widest font-bold mb-6">Try adjusting your search or filters</p>
-              <button 
-                onClick={() => setSearchQuery('')}
-                className="bg-stone-900 text-white px-8 py-3 rounded-sm font-bold text-[10px] uppercase tracking-widest hover:bg-orange-500 transition-all"
-              >
-                Show All Products
-              </button>
-            </div>
-          )}
         </div>
       </section>
 

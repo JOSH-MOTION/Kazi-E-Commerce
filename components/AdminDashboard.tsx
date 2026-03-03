@@ -354,6 +354,45 @@ const StoreSettingsManager = ({ settings }: { settings: StoreSettings | null }) 
   });
   const [saving, setSaving] = useState(false);
 
+  useEffect(() => {
+    if (settings) {
+      setForm({
+        tickerText: settings.tickerText || '',
+        heroTitle: settings.heroTitle || "MEN'S FASHION",
+        heroSubtitle: settings.heroSubtitle || "Min. 35-70% Off",
+        heroImage: settings.heroImage || "https://images.unsplash.com/photo-1519085185758-2ad98035527e?auto=format&fit=crop&q=80&w=1000",
+        heroCtaText: settings.heroCtaText || "Shop Now",
+        heroSecondaryCtaText: settings.heroSecondaryCtaText || "Read More",
+        banner1Title: settings.banner1Title || "Women's Wear",
+        banner1Subtitle: settings.banner1Subtitle || "Min. 35-70% Off",
+        banner1Image: settings.banner1Image || "https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&q=80&w=800",
+        banner2Title: settings.banner2Title || "Men's Fashion",
+        banner2Subtitle: settings.banner2Subtitle || "Flat 70% Off",
+        banner2Image: settings.banner2Image || "https://images.unsplash.com/photo-1488161628813-244768e7f63e?auto=format&fit=crop&q=80&w=800",
+        promo1Title: settings.promo1Title || "Women's Style",
+        promo1Subtitle: settings.promo1Subtitle || "Up to 70% Off",
+        promo1Image: settings.promo1Image || "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&q=80&w=800",
+        promo1Badge: settings.promo1Badge || "New Arrivals",
+        promo1Link: settings.promo1Link || "",
+        promo2Title: settings.promo2Title || "Men's Fashion",
+        promo2Subtitle: settings.promo2Subtitle || "Flat 50% Off",
+        promo2Image: settings.promo2Image || "https://images.unsplash.com/photo-1488161628813-244768e7f63e?auto=format&fit=crop&q=80&w=800",
+        promo2Badge: settings.promo2Badge || "Trending Now",
+        promo2Link: settings.promo2Link || "",
+        promo3Title: settings.promo3Title || "Handbag",
+        promo3Subtitle: settings.promo3Subtitle || "Shop Now",
+        promo3Image: settings.promo3Image || "https://images.unsplash.com/photo-1584917865442-de89df76afd3?auto=format&fit=crop&q=80&w=600",
+        promo3Badge: settings.promo3Badge || "25% Off",
+        promo3Link: settings.promo3Link || "",
+        promo4Title: settings.promo4Title || "Watch",
+        promo4Subtitle: settings.promo4Subtitle || "Shop Now",
+        promo4Image: settings.promo4Image || "https://images.unsplash.com/photo-1524592094714-0f0654e20314?auto=format&fit=crop&q=80&w=600",
+        promo4Badge: settings.promo4Badge || "45% Off",
+        promo4Link: settings.promo4Link || "",
+      });
+    }
+  }, [settings]);
+
   const handleUpload = async (field: string, file: File) => {
     setSaving(true);
     try {
@@ -376,7 +415,10 @@ const StoreSettingsManager = ({ settings }: { settings: StoreSettings | null }) 
     <div className="max-w-4xl space-y-8">
       <div className="bg-white border border-stone-100 rounded-2xl p-8 shadow-sm space-y-8">
         <div className="flex items-center justify-between">
-           <h3 className="text-lg font-serif font-bold uppercase text-stone-900">Storefront Customization</h3>
+           <div className="space-y-1">
+             <h3 className="text-lg font-serif font-bold uppercase text-stone-900">Storefront Customization</h3>
+             <p className="text-[9px] text-stone-400 font-bold uppercase tracking-widest">Don't forget to publish your changes to make them live</p>
+           </div>
            <button onClick={saveSettings} disabled={saving} className="px-8 py-3 bg-[#0052D4] text-white rounded-xl font-bold uppercase tracking-widest text-[9px] hover:bg-[#004aad] transition-all shadow-lg">
             {saving ? <Loader2 size={14} className="animate-spin mx-auto" /> : 'Publish Changes'}
           </button>
@@ -401,8 +443,10 @@ const StoreSettingsManager = ({ settings }: { settings: StoreSettings | null }) 
                     <img src={form.heroImage} className="w-full h-full object-cover" alt="" />
                   </div>
                   <label className="flex-grow h-10 border-2 border-dashed border-stone-100 rounded-xl flex items-center justify-center cursor-pointer hover:border-stone-900 transition-all">
-                    <span className="text-[8px] font-bold uppercase text-stone-400">Change Image</span>
-                    <input type="file" className="hidden" onChange={e => e.target.files?.[0] && handleUpload('heroImage', e.target.files[0])} />
+                    <span className="text-[8px] font-bold uppercase text-stone-400">
+                      {saving ? 'Uploading...' : 'Change Image'}
+                    </span>
+                    <input type="file" className="hidden" disabled={saving} onChange={e => e.target.files?.[0] && handleUpload('heroImage', e.target.files[0])} />
                   </label>
                 </div>
               </div>
