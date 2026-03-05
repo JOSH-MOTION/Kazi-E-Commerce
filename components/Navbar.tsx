@@ -12,7 +12,7 @@ interface NavbarProps {
 }
 
 const Navbar: React.FC<NavbarProps> = ({ navigate }) => {
-  const { user, profile, totalItems, setIsCartOpen, setIsAuthOpen, searchQuery, setSearchQuery, cartTotal } = useAppContext();
+  const { user, profile, totalItems, setIsCartOpen, setIsAuthOpen, searchQuery, setSearchQuery, cartTotal, wishlist } = useAppContext();
   const [isAdminGateOpen, setIsAdminGateOpen] = useState(false);
   const [isSearchVisible, setIsSearchVisible] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -150,9 +150,16 @@ const Navbar: React.FC<NavbarProps> = ({ navigate }) => {
               )}
             </div>
 
-            <button className="hidden sm:block p-2 text-stone-900 hover:text-orange-500 transition-all relative">
+            <button 
+              onClick={() => router.push('/wishlist')}
+              className="hidden sm:block p-2 text-stone-900 hover:text-orange-500 transition-all relative"
+            >
               <Heart size={20} />
-              <span className="absolute top-1 right-1 h-3.5 w-3.5 bg-orange-500 text-white text-[7px] font-bold flex items-center justify-center rounded-full border border-white">0</span>
+              {wishlist.length > 0 && (
+                <span className="absolute top-1 right-1 h-3.5 w-3.5 bg-orange-500 text-white text-[7px] font-bold flex items-center justify-center rounded-full border border-white">
+                  {wishlist.length}
+                </span>
+              )}
             </button>
 
             <button

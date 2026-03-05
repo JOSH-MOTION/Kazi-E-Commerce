@@ -6,6 +6,7 @@ import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import CartDrawer from './components/CartDrawer';
 import Storefront from './components/Storefront';
+import Wishlist from './components/Wishlist';
 import Checkout from './components/Checkout';
 import AdminDashboard from './components/AdminDashboard';
 import OrdersList from './components/OrdersList';
@@ -81,6 +82,7 @@ const Router = () => {
       
       <main className="flex-grow w-full">
         {view === 'store' && <Storefront addToCart={addToCart} />}
+        {view === 'wishlist' && <Wishlist navigate={(path) => window.location.hash = path} addToCart={addToCart} />}
         {view === 'checkout' && (
           <Checkout 
             cart={cart} 
