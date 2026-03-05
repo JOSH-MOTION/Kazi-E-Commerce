@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, ShoppingBag, Heart, Star, Truck, ShieldCheck, RotateCcw, Headphones } from 'lucide-react';
+import { ArrowLeft, ShoppingBag, Heart, Star, Truck, ShieldCheck, RotateCcw, Headphones, CreditCard  } from 'lucide-react';
 import { useAppContext } from '../../../context/AppContext';
 import { Product, ProductVariant } from '../../../types';
 import { optimizeImage } from '../../../cloudinary';
@@ -188,23 +188,23 @@ export default function ProductPage() {
 
             {/* Product Features */}
             <div className="border-t pt-6 space-y-4">
-              <div className="flex items-center gap-3">
-                <Truck size={20} className="text-stone-600" />
-                <span className="text-sm text-stone-600">Free shipping on orders over $50</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <ShieldCheck size={20} className="text-stone-600" />
-                <span className="text-sm text-stone-600">1-year warranty included</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <RotateCcw size={20} className="text-stone-600" />
-                <span className="text-sm text-stone-600">30-day return policy</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <Headphones size={20} className="text-stone-600" />
-                <span className="text-sm text-stone-600">24/7 customer support</span>
-              </div>
-            </div>
+  <div className="flex items-center gap-3">
+    <Truck size={20} className="text-stone-600" />
+    <span className="text-sm text-stone-600">
+      Delivery via Yango or available delivery apps — price varies by ride
+    </span>
+  </div>
+  <div className="flex items-center gap-3">
+    <CreditCard size={20} className="text-stone-600" />
+    <span className="text-sm text-stone-600">
+      Payment via Mobile Money only
+    </span>
+  </div>
+  <div className="flex items-center gap-3">
+    <Headphones size={20} className="text-stone-600" />
+    <span className="text-sm text-stone-600">24/7 customer support</span>
+  </div>
+</div>
           </div>
         </div>
       </div>
