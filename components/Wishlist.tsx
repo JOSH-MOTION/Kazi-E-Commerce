@@ -57,7 +57,6 @@ const Wishlist: React.FC<WishlistProps> = ({ navigate, addToCart }) => {
             <div key={product.id} className="group">
               <ProductCard 
                 product={product} 
-                onClick={() => navigate(`product/${product.id}`)}
                 addToCart={addToCart}
               />
             </div>
