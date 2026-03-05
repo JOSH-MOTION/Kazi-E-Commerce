@@ -93,6 +93,7 @@
     --font-sans: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
     --font-serif: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
     --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    --color-red-50: #fef2f2;
     --color-red-500: #fb2c36;
     --color-red-600: #e40014;
     --color-orange-50: #fff7ed;
@@ -143,6 +144,7 @@
     --container-4xl: 56rem;
     --container-5xl: 64rem;
     --container-6xl: 72rem;
+    --container-7xl: 80rem;
     --text-xs: .75rem;
     --text-xs--line-height: calc(1 / .75);
     --text-sm: .875rem;
@@ -196,6 +198,7 @@
 
   @supports (color: lab(0% 0 0)) {
     :root, :host {
+      --color-red-50: lab(96.5005% 4.18508 1.52328);
       --color-red-500: lab(55.4814% 75.0732 48.8528);
       --color-red-600: lab(48.4493% 77.4328 61.5452);
       --color-orange-50: lab(97.7008% 1.53735 5.90649);
@@ -833,6 +836,10 @@
     display: inline;
   }
 
+  .aspect-3\/4 {
+    aspect-ratio: 3 / 4;
+  }
+
   .aspect-\[1\/1\] {
     aspect-ratio: 1;
   }
@@ -843,6 +850,10 @@
 
   .aspect-\[4\/5\] {
     aspect-ratio: 4 / 5;
+  }
+
+  .aspect-square {
+    aspect-ratio: 1;
   }
 
   .aspect-video {
@@ -1009,6 +1020,10 @@
     width: calc(var(--spacing) * 16);
   }
 
+  .w-20 {
+    width: calc(var(--spacing) * 20);
+  }
+
   .w-24 {
     width: calc(var(--spacing) * 24);
   }
@@ -1057,6 +1072,10 @@
     max-width: var(--container-6xl);
   }
 
+  .max-w-7xl {
+    max-width: var(--container-7xl);
+  }
+
   .max-w-\[200px\] {
     max-width: 200px;
   }
@@ -1087,6 +1106,10 @@
 
   .max-w-xs {
     max-width: var(--container-xs);
+  }
+
+  .flex-1 {
+    flex: 1;
   }
 
   .flex-\[2\] {
@@ -1495,6 +1518,10 @@
     border-color: var(--color-orange-500);
   }
 
+  .border-red-500 {
+    border-color: var(--color-red-500);
+  }
+
   .border-stone-50 {
     border-color: var(--color-stone-50);
   }
@@ -1525,6 +1552,10 @@
     .border-stone-200\/60 {
       border-color: color-mix(in oklab, var(--color-stone-200) 60%, transparent);
     }
+  }
+
+  .border-stone-300 {
+    border-color: var(--color-stone-300);
   }
 
   .border-stone-700 {
@@ -1610,6 +1641,10 @@
     background-color: var(--color-green-50);
   }
 
+  .bg-green-100 {
+    background-color: var(--color-green-100);
+  }
+
   .bg-green-600 {
     background-color: var(--color-green-600);
   }
@@ -1638,6 +1673,10 @@
     .bg-orange-600\/10 {
       background-color: color-mix(in oklab, var(--color-orange-600) 10%, transparent);
     }
+  }
+
+  .bg-red-50 {
+    background-color: var(--color-red-50);
   }
 
   .bg-red-600\/80 {
@@ -1901,6 +1940,10 @@
   .to-transparent {
     --tw-gradient-to: transparent;
     --tw-gradient-stops: var(--tw-gradient-via-stops, var(--tw-gradient-position), var(--tw-gradient-from) var(--tw-gradient-from-position), var(--tw-gradient-to) var(--tw-gradient-to-position));
+  }
+
+  .fill-orange-500 {
+    fill: var(--color-orange-500);
   }
 
   .object-contain {
@@ -2322,6 +2365,10 @@
     color: var(--color-green-600);
   }
 
+  .text-green-700 {
+    color: var(--color-green-700);
+  }
+
   .text-indigo-600 {
     color: var(--color-indigo-600);
   }
@@ -2380,6 +2427,10 @@
 
   .text-stone-600 {
     color: var(--color-stone-600);
+  }
+
+  .text-stone-700 {
+    color: var(--color-stone-700);
   }
 
   .text-stone-800 {
@@ -2864,6 +2915,12 @@
   }
 
   @media (hover: hover) {
+    .hover\:border-stone-400:hover {
+      border-color: var(--color-stone-400);
+    }
+  }
+
+  @media (hover: hover) {
     .hover\:border-stone-900:hover {
       border-color: var(--color-stone-900);
     }
@@ -2902,6 +2959,12 @@
   @media (hover: hover) {
     .hover\:bg-orange-500:hover {
       background-color: var(--color-orange-500);
+    }
+  }
+
+  @media (hover: hover) {
+    .hover\:bg-orange-600:hover {
+      background-color: var(--color-orange-600);
     }
   }
 
@@ -3080,6 +3143,10 @@
     scale: .98;
   }
 
+  .disabled\:cursor-not-allowed:disabled {
+    cursor: not-allowed;
+  }
+
   .disabled\:bg-stone-50:disabled {
     background-color: var(--color-stone-50);
   }
@@ -3090,6 +3157,10 @@
 
   .disabled\:bg-stone-200:disabled {
     background-color: var(--color-stone-200);
+  }
+
+  .disabled\:bg-stone-300:disabled {
+    background-color: var(--color-stone-300);
   }
 
   .disabled\:text-stone-300:disabled {

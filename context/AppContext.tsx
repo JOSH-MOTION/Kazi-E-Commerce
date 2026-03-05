@@ -22,10 +22,13 @@ interface AppContextType {
   setIsAuthOpen: (open: boolean) => void;
   searchQuery: string;
   setSearchQuery: (query: string) => void;
+  wishlist: string[];
   addToCart: (productId: string, variantId: string, quantity: number) => void;
   removeFromCart: (variantId: string) => void;
   updateCartQuantity: (variantId: string, delta: number) => void;
   clearCart: () => void;
+  toggleWishlist: (productId: string) => void;
+  isInWishlist: (productId: string) => boolean;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -38,6 +41,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [promotions, setPromotions] = useState<Promotion[]>([]);
   const [settings, setSettings] = useState<StoreSettings | null>(null);
   const [cart, setCart] = useState<CartItem[]>([]);
+  const [wishlist, setWishlist] = useState<string[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -123,8 +127,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, []);
 
   useEffect(() => {
+    const saved = localStorage.getItem('kazi_wishlist_v2');
+    if (saved) { try { setWishlist(JSON.parse(saved)); } catch (e) { setWishlist([]); } }
+  }, []);
+
+  useEffect(() => {
     if (cart.length >= 0) localStorage.setItem('kazi_cart_v2', JSON.stringify(cart));
   }, [cart]);
+
+  useEffect(() => {
+    if (wishlist.length >= 0) localStorage.setItem('kazi_wishlist_v2', JSON.stringify(wishlist));
+  }, [wishlist]);
 
   const totalItems = useMemo(() => cart.reduce((sum, item) => sum + item.quantity, 0), [cart]);
 
@@ -157,14 +170,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const clearCart = () => setCart([]);
 
+  const toggleWishlist = (productId: string) => {
+    setWishlist(prev => {
+      if (prev.includes(productId)) {
+        return prev.filter(id => id !== productId);
+      } else {
+        return [...prev, productId];
+      }
+    });
+  };
+
+  const isInWishlist = (productId: string) => {
+    return wishlist.includes(productId);
+  };
+
   return (
     <AppContext.Provider value={{
       user, profile, products, categories, promotions, settings,
-      cart, cartTotal, totalItems,
+      cart, cartTotal, totalItems, wishlist,
       isCartOpen, setIsCartOpen,
       isAuthOpen, setIsAuthOpen,
       searchQuery, setSearchQuery,
       addToCart, removeFromCart, updateCartQuantity, clearCart,
+      toggleWishlist, isInWishlist,
     }}>
       {children}
     </AppContext.Provider>

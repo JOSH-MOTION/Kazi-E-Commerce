@@ -4,13 +4,14 @@ import { ShoppingBag, Star, Clock, ShieldCheck, X, AlertTriangle, ChevronLeft, C
 import { Product, ProductVariant } from '../types';
 import { optimizeImage } from '../cloudinary';
 import { useAppContext } from '../context/AppContext';
+import ProductCard from './ProductCard';
 
 interface StorefrontProps {
   addToCart: (productId: string, variantId: string, quantity: number) => void;
 }
 
 const Storefront: React.FC<StorefrontProps> = ({ addToCart }) => {
-  const { products, categories, settings, promotions, searchQuery, setSearchQuery } = useAppContext();
+  const { products, categories, settings, promotions, searchQuery, setSearchQuery, toggleWishlist, isInWishlist } = useAppContext();
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const [activeTab, setActiveTab] = useState<'new' | 'best' | 'top'>('new');
@@ -121,7 +122,7 @@ const Storefront: React.FC<StorefrontProps> = ({ addToCart }) => {
           <div className="p-3 bg-stone-50 rounded-full text-orange-500"><Truck size={24} /></div>
           <div>
             <h4 className="font-bold text-sm text-stone-900">Free Shipping</h4>
-            <p className="text-[10px] text-stone-400 uppercase font-bold tracking-widest">On All Orders Over $99</p>
+            <p className="text-[10px] text-stone-400 uppercase font-bold tracking-widest">On All Orders Over GH₵99</p>
           </div>
         </div>
         <div className="flex items-center gap-4">
@@ -186,9 +187,7 @@ const Storefront: React.FC<StorefrontProps> = ({ addToCart }) => {
               <ProductCard 
                 key={`${item.product.id}-${item.colorName}-${idx}`} 
                 product={item.product} 
-                colorName={item.colorName}
-                variants={item.variants}
-                onClick={() => setSelectedProduct({ ...item.product, initialColor: item.colorName } as any)} 
+                addToCart={addToCart}
               />
             ))
           ) : (
@@ -398,66 +397,6 @@ const Storefront: React.FC<StorefrontProps> = ({ addToCart }) => {
       </section>
 
       {selectedProduct && <ProductModal product={selectedProduct} onClose={() => setSelectedProduct(null)} addToCart={addToCart} />}
-    </div>
-  );
-};
-
-const ProductCard: React.FC<{ product: Product, colorName: string, variants: ProductVariant[], onClick: () => void }> = ({ product, colorName, variants, onClick }) => {
-  const isComingSoon = variants?.every(v => v.isComingSoon) || false;
-  const hasInStock = variants?.some(v => v.stock > 0 && !v.isComingSoon);
-  const displayImage = variants[0]?.images?.[0] || product.images[0];
-  const minPrice = Math.min(...variants.map(v => v.price));
-  const maxPrice = Math.max(...variants.map(v => v.price));
-
-  return (
-    <div className="group cursor-pointer" onClick={onClick}>
-      <div className="relative aspect-[3/4] overflow-hidden bg-[#f9f9f9] rounded-sm mb-4">
-        <img 
-          src={optimizeImage(displayImage, 500)} 
-          alt={product.name}
-          className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
-        />
-        {/* Badges */}
-        <div className="absolute top-3 left-3 flex flex-col gap-1">
-          {isComingSoon && <span className="bg-stone-900 text-white text-[7px] font-bold px-2 py-0.5 rounded-sm uppercase tracking-widest">Soon</span>}
-          {variants[0].stock < 5 && hasInStock && <span className="bg-orange-500 text-white text-[7px] font-bold px-2 py-0.5 rounded-sm uppercase tracking-widest">Featured</span>}
-          {variants[0].price < 100 && <span className="bg-green-600 text-white text-[7px] font-bold px-2 py-0.5 rounded-sm uppercase tracking-widest">15% Off</span>}
-        </div>
-        {/* Quick Actions */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 translate-y-full group-hover:translate-y-0 transition-transform duration-300 bg-white/90 backdrop-blur-sm flex justify-center gap-4">
-          <button 
-            onClick={(e) => { e.stopPropagation(); onClick(); }}
-            className="p-2 text-stone-600 hover:text-orange-500 transition-colors"
-          >
-            <Search size={16} />
-          </button>
-          <button 
-            onClick={(e) => { e.stopPropagation(); alert("Added to Wishlist!"); }}
-            className="p-2 text-stone-600 hover:text-red-500 transition-colors"
-          >
-            <Heart size={16} />
-          </button>
-          <button 
-            onClick={(e) => { e.stopPropagation(); onClick(); }}
-            className="p-2 text-stone-600 hover:text-orange-500 transition-colors"
-          >
-            <ShoppingBag size={16} />
-          </button>
-        </div>
-      </div>
-      <div className="space-y-1">
-        <p className="text-[9px] text-stone-400 uppercase font-bold tracking-widest">{product.categoryId}</p>
-        <h3 className="font-bold text-stone-900 text-xs group-hover:text-orange-500 transition-colors line-clamp-1">{product.name}</h3>
-        <div className="flex items-center gap-0.5 text-orange-400">
-          {[1, 2, 3, 4, 5].map(i => <Star key={i} size={10} fill={i <= 4 ? "currentColor" : "none"} />)}
-          <span className="text-[9px] text-stone-400 ml-1">(2)</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="font-bold text-stone-900 text-xs">
-            GH₵ {minPrice === maxPrice ? minPrice.toLocaleString() : `${minPrice.toLocaleString()} - GH₵ ${maxPrice.toLocaleString()}`}
-          </span>
-        </div>
-      </div>
     </div>
   );
 };
