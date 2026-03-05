@@ -65,9 +65,11 @@ const Navbar: React.FC<NavbarProps> = ({ navigate }) => {
             onClick={() => { safeNavigate('store'); setSearchQuery(''); }}
             className="flex items-center gap-1.5 group"
           >
-            <span className="text-2xl font-black tracking-tighter text-stone-900 uppercase">
-              Cartly<span className="text-orange-500">.</span>
-            </span>
+            <img 
+              src="/catly.png" 
+              alt="Cartly Logo" 
+              className="h-14 w-auto object-contain"
+            />
           </button>
 
           {/* Desktop Navigation */}
