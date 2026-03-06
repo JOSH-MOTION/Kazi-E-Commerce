@@ -139,17 +139,69 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (wishlist.length >= 0) localStorage.setItem('kazi_wishlist_v2', JSON.stringify(wishlist));
   }, [wishlist]);
 
+  // Clean up cart items when products change (remove invalid items)
+  useEffect(() => {
+    if (products.length > 0) {
+      setCart(prev => {
+        const validItems = prev.filter(item => {
+          const product = products.find(p => p.id === item.productId);
+          const variant = product?.variants?.find(v => v.id === item.variantId);
+          const isValid = product && variant;
+          if (!isValid) {
+            console.warn('Removing invalid cart item:', item);
+          }
+          return isValid;
+        });
+        return validItems;
+      });
+    }
+  }, [products]);
+
   const totalItems = useMemo(() => cart.reduce((sum, item) => sum + item.quantity, 0), [cart]);
 
   const cartTotal = useMemo(() => {
     return cart.reduce((sum, item) => {
-      const product = products.find(p => p.id === item.productId);
-      const variant = product?.variants?.find(v => v.id === item.variantId);
-      return sum + (variant?.price || 0) * item.quantity;
+      try {
+        const product = products.find(p => p.id === item.productId);
+        if (!product) {
+          console.warn('Product not found in cart:', item.productId);
+          return sum;
+        }
+        
+        const variant = product.variants?.find(v => v.id === item.variantId);
+        if (!variant) {
+          console.warn('Variant not found in cart:', item.variantId);
+          return sum;
+        }
+        
+        return sum + (variant.price || 0) * item.quantity;
+      } catch (error) {
+        console.error('Error calculating cart total:', error, item);
+        return sum;
+      }
     }, 0);
   }, [cart, products]);
 
   const addToCart = (productId: string, variantId: string, quantity: number) => {
+    // Validate inputs
+    if (!productId || !variantId || quantity <= 0) {
+      console.error('Invalid cart item:', { productId, variantId, quantity });
+      return;
+    }
+
+    // Check if product and variant exist
+    const product = products.find(p => p.id === productId);
+    if (!product) {
+      console.error('Product not found:', productId);
+      return;
+    }
+
+    const variant = product.variants?.find(v => v.id === variantId);
+    if (!variant) {
+      console.error('Variant not found:', variantId);
+      return;
+    }
+
     setCart(prev => {
       const existing = prev.find(item => item.variantId === variantId);
       if (existing) {
