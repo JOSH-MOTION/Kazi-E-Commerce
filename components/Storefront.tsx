@@ -122,7 +122,7 @@ const Storefront: React.FC<StorefrontProps> = ({ addToCart }) => {
           <div className="p-3 bg-stone-50 rounded-full text-orange-500"><Truck size={24} /></div>
           <div>
             <h4 className="font-bold text-sm text-stone-900">Free Shipping</h4>
-            <p className="text-[10px] text-stone-400 uppercase font-bold tracking-widest">On All Orders Over GH₵99</p>
+            <p className="text-[10px] text-stone-400 uppercase font-bold tracking-widest">On All Orders Over GH₵2000</p>
           </div>
         </div>
         <div className="flex items-center gap-4">
@@ -135,8 +135,8 @@ const Storefront: React.FC<StorefrontProps> = ({ addToCart }) => {
         <div className="flex items-center gap-4">
           <div className="p-3 bg-stone-50 rounded-full text-orange-500"><RotateCcw size={24} /></div>
           <div>
-            <h4 className="font-bold text-sm text-stone-900">100% Money Back</h4>
-            <p className="text-[10px] text-stone-400 uppercase font-bold tracking-widest">30 Days Return Policy</p>
+            <h4 className="font-bold text-sm text-stone-900">100% Change of Item</h4>
+            <p className="text-[10px] text-stone-400 uppercase font-bold tracking-widest">1 Day Return Policy</p>
           </div>
         </div>
         <div className="flex items-center gap-4">
