@@ -844,10 +844,6 @@
     aspect-ratio: 1;
   }
 
-  .aspect-\[3\/4\] {
-    aspect-ratio: 3 / 4;
-  }
-
   .aspect-\[4\/5\] {
     aspect-ratio: 4 / 5;
   }
@@ -1223,10 +1219,6 @@
 
   .justify-center {
     justify-content: center;
-  }
-
-  .gap-0\.5 {
-    gap: calc(var(--spacing) * .5);
   }
 
   .gap-1 {
@@ -1608,6 +1600,10 @@
     }
   }
 
+  .border-t-transparent {
+    border-top-color: #0000;
+  }
+
   .bg-\[\#25D366\] {
     background-color: #25d366;
   }
@@ -1639,10 +1635,6 @@
 
   .bg-green-50 {
     background-color: var(--color-green-50);
-  }
-
-  .bg-green-100 {
-    background-color: var(--color-green-100);
   }
 
   .bg-green-600 {
@@ -2365,10 +2357,6 @@
     color: var(--color-green-600);
   }
 
-  .text-green-700 {
-    color: var(--color-green-700);
-  }
-
   .text-indigo-600 {
     color: var(--color-indigo-600);
   }
@@ -2820,12 +2808,6 @@
   @media (hover: hover) {
     .group-hover\:bg-stone-900:is(:where(.group):hover *) {
       background-color: var(--color-stone-900);
-    }
-  }
-
-  @media (hover: hover) {
-    .group-hover\:text-orange-500:is(:where(.group):hover *) {
-      color: var(--color-orange-500);
     }
   }
 
