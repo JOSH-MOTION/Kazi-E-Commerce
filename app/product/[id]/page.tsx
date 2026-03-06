@@ -14,15 +14,39 @@ export default function ProductPage() {
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [selectedImage, setSelectedImage] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    if (!params.id) {
+      console.error('No product ID provided');
+      setIsLoading(false);
+      return;
+    }
+    
+    console.log('Looking for product with ID:', params.id);
+    console.log('Available products:', products.map(p => ({ id: p.id, name: p.name })));
+    
     const foundProduct = products.find(p => p.id === params.id);
+    console.log('Found product:', foundProduct);
+    
     if (foundProduct) {
       setProduct(foundProduct);
       setSelectedVariant(foundProduct.variants?.[0] || null);
       setSelectedImage(0);
     }
+    setIsLoading(false);
   }, [params.id, products]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-stone-600">Loading product...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!product) {
     return (
@@ -42,11 +66,18 @@ export default function ProductPage() {
 
   const variants = product.variants || [];
   const images = [...(product.images || []), ...(selectedVariant?.images || [])];
-  const displayImages = images.length > 0 ? images : ['/placeholder.jpg'];
+  const displayImages = images.length > 0 ? images : ['https://via.placeholder.com/400x400/f9f9f9/999999?text=No+Image'];
 
   const handleAddToCart = () => {
     if (selectedVariant) {
-      addToCart(product.id, selectedVariant.id, quantity);
+      try {
+        addToCart(product.id, selectedVariant.id, quantity);
+      } catch (error) {
+        console.error('Error adding to cart:', error);
+        alert('Failed to add item to cart. Please try again.');
+      }
+    } else {
+      alert('Please select a variant before adding to cart.');
     }
   };
 
@@ -70,6 +101,10 @@ export default function ProductPage() {
                 src={optimizeImage(displayImages[selectedImage], 800)} 
                 alt={product.name}
                 className="w-full h-full object-cover"
+                onError={(e) => {
+                  console.error('Image failed to load:', displayImages[selectedImage]);
+                  e.currentTarget.src = 'https://via.placeholder.com/400x400/f9f9f9/999999?text=Image+Error';
+                }}
               />
             </div>
             <div className="flex gap-2 overflow-x-auto">
@@ -85,6 +120,9 @@ export default function ProductPage() {
                     src={optimizeImage(image, 100)} 
                     alt={`${product.name} ${index + 1}`}
                     className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.src = 'https://via.placeholder.com/80x80/f9f9f9/999999?text=Error';
+                    }}
                   />
                 </button>
               ))}
