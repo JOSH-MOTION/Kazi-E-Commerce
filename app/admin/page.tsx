@@ -6,12 +6,14 @@ import AdminDashboard from '../../components/AdminDashboard';
 import { useAppContext } from '../../context/AppContext';
 import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { db } from '../../firebase';
-import { Order, ManualSale } from '../../types';
+import { Order, ManualSale, InventoryProduct, Expense } from '../../types';
 
 export default function AdminPage() {
   const { profile } = useAppContext();
   const [orders, setOrders] = useState<Order[]>([]);
   const [manualSales, setManualSales] = useState<ManualSale[]>([]);
+  const [inventoryProducts, setInventoryProducts] = useState<InventoryProduct[]>([]);
+  const [expenses, setExpenses] = useState<Expense[]>([]);
   const router = useRouter();
 
   useEffect(() => {
@@ -39,13 +41,36 @@ export default function AdminPage() {
       console.error("Manual sales listener error:", err);
     });
 
+    const qInventory = query(collection(db, 'inventory'), orderBy('createdAt', 'desc'));
+    const unsubInventory = onSnapshot(qInventory, (snapshot) => {
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as InventoryProduct));
+      setInventoryProducts(data);
+    }, (err) => {
+      console.error("Inventory listener error:", err);
+    });
+
+    const qExpenses = query(collection(db, 'expenses'), orderBy('createdAt', 'desc'));
+    const unsubExpenses = onSnapshot(qExpenses, (snapshot) => {
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Expense));
+      setExpenses(data);
+    }, (err) => {
+      console.error("Expenses listener error:", err);
+    });
+
     return () => {
       unsubscribe();
       unsubManual();
+      unsubInventory();
+      unsubExpenses();
     };
   }, [profile]);
 
   if (profile?.role !== 'ADMIN') return null;
 
-  return <AdminDashboard orders={orders} manualSales={manualSales} />;
+  return <AdminDashboard 
+    orders={orders} 
+    manualSales={manualSales} 
+    inventoryProducts={inventoryProducts}
+    expenses={expenses}
+  />;
 }

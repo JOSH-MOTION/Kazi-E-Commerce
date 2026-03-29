@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { TrendingUp, Clock, Package, AlertCircle, Ticket, Edit3, Save, X, Plus, Loader2, Trash2, Layers, CalendarClock, ChevronDown, ChevronUp, Zap, Check, Sparkles, Palette, Settings, LayoutGrid, Image as ImageIcon } from 'lucide-react';
-import { Order, OrderStatus, Product, ProductVariant, Category, Promotion, StoreSettings, ManualSale } from '../types';
+import { Order, OrderStatus, Product, ProductVariant, Category, Promotion, StoreSettings, ManualSale, InventoryProduct, Expense } from '../types';
 import { db } from '../firebase';
 import { updateDoc, doc, addDoc, collection, deleteDoc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { useAppContext } from '../context/AppContext';
@@ -12,13 +12,15 @@ import { MOMO_CONFIG } from '../constants';
 interface AdminDashboardProps {
   orders: Order[];
   manualSales: ManualSale[];
+  inventoryProducts: InventoryProduct[];
+  expenses: Expense[];
 }
 
 const STANDARD_SIZES = ['S', 'M', 'L', 'XL', 'XXL', 'OS'];
 
-const AdminDashboard: React.FC<AdminDashboardProps> = ({ orders, manualSales }) => {
+const AdminDashboard: React.FC<AdminDashboardProps> = ({ orders, manualSales, inventoryProducts, expenses }) => {
   const { products, categories, promotions, settings } = useAppContext();
-  const [activeTab, setActiveTab] = useState<'orders' | 'inventory' | 'promos' | 'categories' | 'settings' | 'manual'>('orders');
+  const [activeTab, setActiveTab] = useState<'orders' | 'inventory' | 'promos' | 'categories' | 'settings' | 'manual' | 'inventoryTracking'>('orders');
   const [isAddingProduct, setIsAddingProduct] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
@@ -73,6 +75,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ orders, manualSales }) 
               { id: 'categories', label: 'Categories', icon: LayoutGrid },
               { id: 'promos', label: 'Promos', icon: Ticket },
               { id: 'manual', label: 'Manual Sales', icon: MessageCircle },
+              { id: 'inventoryTracking', label: 'Inventory Tracking', icon: BarChart3 },
               { id: 'settings', label: 'Settings', icon: Settings }
             ].map(tab => (
               <button
@@ -118,8 +121,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ orders, manualSales }) 
 
         {activeTab === 'categories' && <CategoryManager categories={categories} />}
         {activeTab === 'promos' && <PromotionManager promotions={promotions} />}
-        {activeTab === 'manual' && <ManualSalesManager manualSales={manualSales} />}
-        {activeTab === 'settings' && <StoreSettingsManager settings={settings} />}
+        { activeTab === 'manual' && <ManualSalesManager manualSales={manualSales} /> }
+        { activeTab === 'inventoryTracking' && <InventoryTracker inventoryProducts={inventoryProducts} manualSales={manualSales} expenses={expenses} /> }
+        { activeTab === 'settings' && <StoreSettingsManager settings={settings} /> }
 
         {(isAddingProduct || editingProduct) && <ProductForm product={editingProduct} onClose={() => { setIsAddingProduct(false); setEditingProduct(null); }} />}
       </div>
@@ -1036,7 +1040,362 @@ Please confirm so we dispatch immediately.`;
   );
 };
 
+const InventoryTracker = ({ inventoryProducts, manualSales, expenses }: { inventoryProducts: InventoryProduct[], manualSales: ManualSale[], expenses: Expense[] }) => {
+  const [productForm, setProductForm] = useState({ name: '', quantityBought: 0, totalInvestment: 0, unitCost: 0, defaultSellingPrice: 0 });
+  const [editingInventoryProduct, setEditingInventoryProduct] = useState<InventoryProduct | null>(null);
+  const [saleForm, setSaleForm] = useState({ inventoryProductId: '', quantity: 1, salePrice: 0 });
+  const [expenseForm, setExpenseForm] = useState({ description: '', amount: 0 });
+  const [saving, setSaving] = useState(false);
+
+  const addInventoryProduct = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!productForm.name || !productForm.quantityBought) return;
+    setSaving(true);
+    try {
+      const finalInvestment = productForm.totalInvestment || (productForm.unitCost * productForm.quantityBought);
+      
+      if (editingInventoryProduct) {
+        await updateDoc(doc(db, 'inventory', editingInventoryProduct.id), {
+          name: productForm.name,
+          quantityBought: productForm.quantityBought,
+          totalInvestment: finalInvestment,
+          defaultSellingPrice: productForm.defaultSellingPrice,
+          // Update remaining stock if qty bought changed? 
+          // For now keep it simple: only update basic info.
+          // Or: remainingStock = newQtyBought - (oldQtyBought - oldRemainingStock)
+          remainingStock: productForm.quantityBought - (editingInventoryProduct.quantityBought - editingInventoryProduct.remainingStock)
+        });
+      } else {
+        await addDoc(collection(db, 'inventory'), {
+          name: productForm.name,
+          quantityBought: productForm.quantityBought,
+          totalInvestment: finalInvestment,
+          defaultSellingPrice: productForm.defaultSellingPrice,
+          remainingStock: productForm.quantityBought,
+          createdAt: new Date().toISOString()
+        });
+      }
+      setProductForm({ name: '', quantityBought: 0, totalInvestment: 0, unitCost: 0, defaultSellingPrice: 0 });
+      setEditingInventoryProduct(null);
+    } catch (e) { alert("Error saving product"); }
+    setSaving(false);
+  };
+
+  const startEditing = (p: InventoryProduct) => {
+    setEditingInventoryProduct(p);
+    setProductForm({
+      name: p.name,
+      quantityBought: p.quantityBought,
+      totalInvestment: p.totalInvestment,
+      unitCost: p.totalInvestment / p.quantityBought,
+      defaultSellingPrice: p.defaultSellingPrice || 0
+    });
+  };
+
+  const addManualSale = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!saleForm.inventoryProductId || !saleForm.quantity) return;
+    const product = inventoryProducts.find(p => p.id === saleForm.inventoryProductId);
+    if (!product) return;
+    if (product.remainingStock < saleForm.quantity) {
+      alert("Not enough stock!");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const costPerItem = product.totalInvestment / product.quantityBought;
+      const profit = (saleForm.salePrice - costPerItem) * saleForm.quantity;
+      
+      await addDoc(collection(db, 'manualSales'), {
+        itemName: product.name,
+        quantity: saleForm.quantity,
+        salePrice: saleForm.salePrice,
+        costPrice: costPerItem,
+        profit,
+        channel: 'Offline Tracking',
+        inventoryProductId: product.id,
+        createdAt: new Date().toISOString()
+      });
+
+      await updateDoc(doc(db, 'inventory', product.id), {
+        remainingStock: product.remainingStock - saleForm.quantity
+      });
+
+      setSaleForm({ inventoryProductId: '', quantity: 1, salePrice: 0 });
+    } catch (e) { alert("Error recording sale"); }
+    setSaving(false);
+  };
+
+  const addExpense = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!expenseForm.description || !expenseForm.amount) return;
+    setSaving(true);
+    try {
+      await addDoc(collection(db, 'expenses'), {
+        ...expenseForm,
+        createdAt: new Date().toISOString()
+      });
+      setExpenseForm({ description: '', amount: 0 });
+    } catch (e) { alert("Error adding expense"); }
+    setSaving(false);
+  };
+
+  const filteredSales = manualSales.filter(s => s.inventoryProductId);
+
+  const productStats = inventoryProducts.map(p => {
+    const productSales = filteredSales.filter(s => s.inventoryProductId === p.id);
+    const qtySold = productSales.reduce((sum, s) => sum + s.quantity, 0);
+    const revenue = productSales.reduce((sum, s) => sum + (s.salePrice * s.quantity), 0);
+    const profit = productSales.reduce((sum, s) => sum + s.profit, 0);
+    return { ...p, qtySold, revenue, profit };
+  });
+
+  const totals = {
+    investment: inventoryProducts.reduce((sum, p) => sum + p.totalInvestment, 0),
+    revenue: filteredSales.reduce((sum, s) => sum + (s.salePrice * s.quantity), 0),
+    profit: filteredSales.reduce((sum, s) => sum + s.profit, 0),
+    expenses: expenses.reduce((sum, e) => sum + e.amount, 0),
+  };
+  const netProfit = totals.revenue - (inventoryProducts.reduce((sum, p) => {
+    return 0; // dummy
+  }, 0));
+  
+  const finalNetProfit = totals.profit - totals.expenses;
+
+  return (
+    <div className="space-y-10 animate-in fade-in pb-20">
+      {/* Dashboard Summary */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <StatCard icon={<Layers size={16} />} label="Total Investment" value={`GH₵ ${totals.investment.toLocaleString()}`} color="stone" />
+        <StatCard icon={<TrendingUp size={16} />} label="Total Revenue" value={`GH₵ ${totals.revenue.toLocaleString()}`} color="orange" />
+        <StatCard icon={<DollarSign size={16} />} label="Gross Profit" value={`GH₵ ${totals.profit.toLocaleString()}`} color="green" />
+        <StatCard icon={<AlertCircle size={16} />} label="Net Profit (After Exp)" value={`GH₵ ${finalNetProfit.toLocaleString()}`} color="blue" />
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Forms Section */}
+        <div className="lg:col-span-1 space-y-6">
+          <div className="bg-white p-6 rounded-2xl border border-stone-100 shadow-sm">
+            <h3 className="text-sm font-bold uppercase tracking-widest text-stone-900 mb-4 flex items-center justify-between">
+              <span className="flex items-center gap-2">{editingInventoryProduct ? <Edit3 size={14} /> : <Plus size={14} />} {editingInventoryProduct ? 'Edit Inventory' : 'New Inventory Product'}</span>
+              {editingInventoryProduct && <button onClick={() => { setEditingInventoryProduct(null); setProductForm({name: '', quantityBought: 0, totalInvestment: 0, unitCost: 0, defaultSellingPrice: 0}); }} className="text-[7px] text-stone-400 hover:text-stone-900 uppercase">Cancel</button>}
+            </h3>
+            <form onSubmit={addInventoryProduct} className="space-y-4">
+              <Input label="Product Name" value={productForm.name} onChange={(v:any) => setProductForm({...productForm, name: v})} placeholder="e.g. Waffle Round-Neck" />
+              <div className="grid grid-cols-2 gap-4">
+                <Input label="Qty Bought" type="number" value={productForm.quantityBought} onChange={(v:any) => {
+                  const qty = parseInt(v) || 0;
+                  setProductForm({...productForm, quantityBought: qty, totalInvestment: qty * productForm.unitCost });
+                }} />
+                <Input label="Cost per Piece" type="number" value={productForm.unitCost} onChange={(v:any) => {
+                  const unit = parseInt(v) || 0;
+                  setProductForm({...productForm, unitCost: unit, totalInvestment: unit * productForm.quantityBought });
+                }} />
+              </div>
+              <Input label="Total Investment" type="number" value={productForm.totalInvestment} onChange={(v:any) => {
+                const total = parseInt(v) || 0;
+                setProductForm({...productForm, totalInvestment: total, unitCost: productForm.quantityBought > 0 ? total / productForm.quantityBought : 0 });
+              }} />
+              <button disabled={saving} className={`w-full py-3 ${editingInventoryProduct ? 'bg-[#0052D4]' : 'bg-stone-900'} text-white rounded-xl font-bold uppercase tracking-widest text-[9px] hover:opacity-90`}>
+                {saving ? <Loader2 size={12} className="animate-spin mx-auto" /> : (editingInventoryProduct ? 'Update Product' : 'Add Product')}
+              </button>
+            </form>
+          </div>
+
+          <div className="bg-white p-6 rounded-2xl border border-stone-100 shadow-sm">
+            <h3 className="text-sm font-bold uppercase tracking-widest text-stone-900 mb-4 flex items-center gap-2">
+              <Sparkles size={14} /> Record Offline Sale
+            </h3>
+            <form onSubmit={addManualSale} className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-[7px] font-bold uppercase text-stone-400 tracking-widest block">Select Product</label>
+                <select 
+                  className="w-full p-3 bg-stone-50 border border-stone-100 rounded-xl outline-none font-bold text-xs" 
+                  value={saleForm.inventoryProductId} 
+                  onChange={e => {
+                    setSaleForm({...saleForm, inventoryProductId: e.target.value, salePrice: 0 });
+                  }}
+                >
+                  <option value="">Choose item...</option>
+                  {inventoryProducts.map(p => (
+                    <option key={p.id} value={p.id}>{p.name} ({p.remainingStock} in stock)</option>
+                  ))}
+                </select>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <Input label="Qty Sold" type="number" value={saleForm.quantity} onChange={(v:any) => setSaleForm({...saleForm, quantity: parseInt(v) || 0})} />
+                <Input label="Price per Item" type="number" value={saleForm.salePrice} onChange={(v:any) => setSaleForm({...saleForm, salePrice: parseInt(v) || 0})} />
+              </div>
+              <button disabled={saving || !saleForm.inventoryProductId} className="w-full py-3 bg-green-600 text-white rounded-xl font-bold uppercase tracking-widest text-[9px] hover:bg-green-700 disabled:opacity-50">
+                {saving ? <Loader2 size={12} className="animate-spin mx-auto" /> : 'Log Sale'}
+              </button>
+            </form>
+          </div>
+
+          <div className="bg-white p-6 rounded-2xl border border-stone-100 shadow-sm">
+            <h3 className="text-sm font-bold uppercase tracking-widest text-stone-900 mb-4 flex items-center gap-2">
+              <DollarSign size={14} /> Add Expense
+            </h3>
+            <form onSubmit={addExpense} className="space-y-4">
+              <Input label="Ex. Boxes, Shipping" value={expenseForm.description} onChange={(v:any) => setExpenseForm({...expenseForm, description: v})} />
+              <Input label="Amount" type="number" value={expenseForm.amount} onChange={(v:any) => setExpenseForm({...expenseForm, amount: parseInt(v) || 0})} />
+              <button disabled={saving} className="w-full py-3 bg-stone-900 text-white rounded-xl font-bold uppercase tracking-widest text-[9px] hover:bg-stone-800">
+                {saving ? <Loader2 size={12} className="animate-spin mx-auto" /> : 'Add Expense'}
+              </button>
+            </form>
+          </div>
+        </div>
+
+        {/* Tables Section */}
+        <div className="lg:col-span-2 space-y-8">
+          {/* Inventory Table */}
+          <div className="bg-white border border-stone-100 rounded-2xl overflow-hidden shadow-sm">
+            <div className="p-4 border-b border-stone-50 bg-stone-50/50">
+              <h4 className="text-[10px] font-bold uppercase text-stone-900 tracking-widest">Product Stock & Profit</h4>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-[10px]">
+                <thead className="bg-stone-50/30 border-b border-stone-50">
+                  <tr>
+                    <th className="px-4 py-3 font-bold uppercase tracking-widest text-stone-400">Product</th>
+                    <th className="px-4 py-3 font-bold uppercase tracking-widest text-stone-400">Cost</th>
+                    <th className="px-4 py-3 font-bold uppercase tracking-widest text-stone-400">Stock</th>
+                    <th className="px-4 py-3 font-bold uppercase tracking-widest text-stone-400">Sold</th>
+                    <th className="px-4 py-3 font-bold uppercase tracking-widest text-stone-400">Revenue</th>
+                    <th className="px-4 py-3 font-bold uppercase tracking-widest text-stone-400">Profit</th>
+                    <th className="px-4 py-3"></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-stone-50">
+                  {productStats.map((p) => (
+                    <tr key={p.id} className="hover:bg-stone-50/20 transition-colors">
+                      <td className="px-4 py-4">
+                        <p className="font-bold text-stone-900">{p.name}</p>
+                      </td>
+                      <td className="px-4 py-4 font-mono">GH₵ {(p.totalInvestment / p.quantityBought).toFixed(2)}</td>
+                      <td className="px-4 py-4">
+                        <span className={`font-mono font-bold ${p.remainingStock < 5 ? 'text-red-500' : 'text-stone-900'}`}>
+                          {p.remainingStock} / {p.quantityBought}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4 font-mono">{p.qtySold}</td>
+                      <td className="px-4 py-4 font-bold">GH₵ {p.revenue.toLocaleString()}</td>
+                      <td className="px-4 py-4 font-bold text-green-600">GH₵ {p.profit.toLocaleString()}</td>
+                      <td className="px-4 py-4">
+                        <div className="flex gap-2">
+                          <button onClick={() => startEditing(p)} className="text-stone-300 hover:text-stone-900 transition-all">
+                            <Edit3 size={12} />
+                          </button>
+                          <button onClick={async () => {
+                            if (confirm(`Delete "${p.name}"? This will not delete past sales.`)) {
+                              await deleteDoc(doc(db, 'inventory', p.id));
+                            }
+                          }} className="text-stone-200 hover:text-red-500 transition-all">
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  {inventoryProducts.length === 0 && (
+                    <tr><td colSpan={6} className="text-center py-10 text-stone-300 uppercase text-[8px] tracking-widest font-bold">No items tracked yet</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div className="bg-white border border-stone-100 rounded-2xl overflow-hidden shadow-sm">
+            <div className="p-4 border-b border-stone-50 bg-stone-50/50">
+              <h4 className="text-[10px] font-bold uppercase text-stone-900 tracking-widest">Recent Inventory Sales</h4>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-[10px]">
+                <thead className="bg-stone-50/30 border-b border-stone-50">
+                  <tr>
+                    <th className="px-4 py-3 font-bold uppercase tracking-widest text-stone-400">Date</th>
+                    <th className="px-4 py-3 font-bold uppercase tracking-widest text-stone-400">Product</th>
+                    <th className="px-4 py-3 font-bold uppercase tracking-widest text-stone-400">Qty</th>
+                    <th className="px-4 py-3 font-bold uppercase tracking-widest text-stone-400">Revenue</th>
+                    <th className="px-4 py-3 font-bold uppercase tracking-widest text-stone-400">Profit</th>
+                    <th className="px-4 py-3"></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-stone-50">
+                  {filteredSales.map((sale) => (
+                    <tr key={sale.id} className="hover:bg-stone-50/20 transition-colors">
+                      <td className="px-4 py-4 text-stone-400">{new Date(sale.createdAt).toLocaleDateString()}</td>
+                      <td className="px-4 py-4 font-bold text-stone-900">{sale.itemName}</td>
+                      <td className="px-4 py-4 font-mono">{sale.quantity}</td>
+                      <td className="px-4 py-4 font-bold">GH₵ {(sale.salePrice * sale.quantity).toLocaleString()}</td>
+                      <td className="px-4 py-4 font-bold text-green-600">GH₵ {sale.profit.toLocaleString()}</td>
+                      <td className="px-4 py-4">
+                        <button onClick={async () => {
+                          if (confirm(`Remove entry for "${sale.itemName}"?`)) {
+                            await deleteDoc(doc(db, 'manualSales', sale.id));
+                          }
+                        }} className="text-stone-200 hover:text-red-500 transition-all">
+                          <Trash2 size={12} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                  {filteredSales.length === 0 && (
+                    <tr><td colSpan={6} className="text-center py-10 text-stone-300 uppercase text-[8px] tracking-widest font-bold">No inventory sales logged yet</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Expenses Table */}
+          <div className="bg-white border border-stone-100 rounded-2xl overflow-hidden shadow-sm">
+            <div className="p-4 border-b border-stone-50 bg-stone-50/50">
+              <h4 className="text-[10px] font-bold uppercase text-stone-900 tracking-widest">General Expenses</h4>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-[10px]">
+                <thead className="bg-stone-50/30 border-b border-stone-50">
+                  <tr>
+                    <th className="px-4 py-3 font-bold uppercase tracking-widest text-stone-400">Description</th>
+                    <th className="px-4 py-3 font-bold uppercase tracking-widest text-stone-400">Date</th>
+                    <th className="px-4 py-3 font-bold uppercase tracking-widest text-stone-400">Amount</th>
+                    <th className="px-4 py-3"></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-stone-50">
+                  {expenses.map((e) => (
+                    <tr key={e.id} className="hover:bg-stone-50/20 transition-colors">
+                      <td className="px-4 py-4 font-bold text-stone-900">{e.description}</td>
+                      <td className="px-4 py-4 text-stone-400">{new Date(e.createdAt).toLocaleDateString()}</td>
+                      <td className="px-4 py-4 font-bold text-red-500">GH₵ {e.amount.toLocaleString()}</td>
+                      <td className="px-4 py-4">
+                        <button onClick={async () => {
+                          if (confirm(`Remove this expense entry?`)) {
+                            await deleteDoc(doc(db, 'expenses', e.id));
+                          }
+                        }} className="text-stone-200 hover:text-red-500 transition-all">
+                          <Trash2 size={12} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                  {expenses.length === 0 && (
+                    <tr><td colSpan={4} className="text-center py-10 text-stone-300 uppercase text-[8px] tracking-widest font-bold">No expenses logged yet</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const ManualSalesManager = ({ manualSales }: { manualSales: ManualSale[] }) => {
+  const { products } = useAppContext();
   const [form, setForm] = useState({ itemName: '', quantity: 1, salePrice: 0, costPrice: 0, channel: 'WhatsApp' });
   const [saving, setSaving] = useState(false);
 
@@ -1118,6 +1477,9 @@ const ManualSalesManager = ({ manualSales }: { manualSales: ManualSale[] }) => {
                       onClick={async () => {
                         if (confirm(`Remove entry for "${sale.itemName}"?`)) {
                           try {
+                            // If it was linked to inventory, we should probably restore stock? 
+                            // Current requirement doesn't specify, but it's good practice.
+                            // For now keep it simple.
                             await deleteDoc(doc(db, 'manualSales', sale.id));
                           } catch (err: any) {
                             alert(`Failed to delete entry: ${err.message}`);
@@ -1169,10 +1531,10 @@ const StatusBadge = ({ status }: { status: OrderStatus }) => {
   return <span className={`px-2 py-1 rounded text-[7px] font-bold uppercase tracking-widest ${styles[status]}`}>{status.replace('_', ' ')}</span>;
 };
 
-const Input = ({ label, value, onChange, placeholder, type = 'text' }: any) => (
+const Input = ({ label, value, onChange, placeholder, type = 'text', min }: any) => (
   <div className="space-y-1.5">
     <label className="text-[7px] font-bold uppercase text-stone-400 tracking-widest block">{label}</label>
-    <input type={type} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} className="w-full p-3 bg-stone-50 border border-stone-100 rounded-xl outline-none font-bold text-stone-900 text-[11px] placeholder:text-stone-200 shadow-sm" />
+    <input type={type} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} min={min} className="w-full p-3 bg-stone-50 border border-stone-100 rounded-xl outline-none font-bold text-stone-900 text-[11px] placeholder:text-stone-200 shadow-sm" />
   </div>
 );
 

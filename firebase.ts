@@ -21,3 +21,5 @@ export const auth = getAuth(app);
 export const ORDERS_REF = collection(db, 'orders');
 export const USERS_REF = collection(db, 'users');
 export const PRODUCTS_REF = collection(db, 'products');
+export const INVENTORY_REF = collection(db, 'inventory');
+export const EXPENSES_REF = collection(db, 'expenses');

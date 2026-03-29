@@ -126,4 +126,22 @@ export interface ManualSale {
   profit: number;
   channel: string; // e.g., 'WhatsApp', 'In-Person'
   createdAt: string;
+  inventoryProductId?: string; // Optional link to inventory
+}
+
+export interface InventoryProduct {
+  id: string;
+  name: string;
+  quantityBought: number;
+  totalInvestment: number; // Cost per item * quantityBought usually
+  remainingStock: number;
+  defaultSellingPrice?: number;
+  createdAt: string;
+}
+
+export interface Expense {
+  id: string;
+  description: string;
+  amount: number;
+  createdAt: string;
 }
