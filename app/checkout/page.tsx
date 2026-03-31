@@ -152,16 +152,20 @@ export default function CheckoutPage() {
           try {
             await verifyWithServer(transaction.reference);
             const oid = await saveOrder(transaction.reference, OrderStatus.PENDING_VERIFICATION);
-            setOrderId(oid);
             buildWhatsapp(oid);
-            clearCart(); // Clear cart after successful order
+            setOrderId(oid);
+            clearCart();
+            // Clear loading BEFORE setting step so button doesn't flash
+            setLoading(false);
+            setVerifying(false);
             setStep(3);
           } catch (err) {
+            setLoading(false);
+            setVerifying(false);
             setPayError(`Payment received (ref: ${transaction.reference}) but order save failed. Contact support.`);
           }
-          setLoading(false);
         },
-        onCancel: () => { 
+        onCancel: () => {
           setLoading(false);
           setVerifying(false);
         },
@@ -173,6 +177,7 @@ export default function CheckoutPage() {
     } catch (err) {
       setPayError('Failed to open payment. Please refresh and try again.');
       setLoading(false);
+      setVerifying(false);
     }
   };
 
@@ -183,13 +188,14 @@ export default function CheckoutPage() {
       const oid = await saveOrder(form.momoId, OrderStatus.PENDING_VERIFICATION);
       setOrderId(oid);
       buildWhatsapp(oid);
-      clearCart(); // Clear cart after successful order
+      clearCart();
+      setLoading(false);
       setStep(3);
       setTimeout(() => { if (whatsappUrl) window.location.href = whatsappUrl; }, 1800);
     } catch (err) {
       setPayError('Failed to place order. Please check your connection.');
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   /* ── Step 3 ── */
@@ -332,11 +338,17 @@ export default function CheckoutPage() {
                   </div>
                   <div className="flex gap-4">
                     <button onClick={() => setStep(1)} className="px-7 py-5 border-2 border-stone-100 rounded-3xl font-bold text-stone-600 hover:bg-stone-50 transition-all text-sm">← Edit</button>
-                    <button disabled={loading || verifying} onClick={handlePaystack}
-                      className="flex-grow bg-stone-900 text-white py-5 rounded-3xl font-bold flex items-center justify-center gap-3 hover:bg-orange-500 transition-all shadow-xl disabled:bg-stone-300">
-                      {loading || verifying
-                        ? <><Loader2 className="animate-spin" size={20}/>{verifying ? 'Verifying...' : 'Opening...'}</>
-                        : <><Lock size={17}/> Pay GH₵ {finalTotal.toLocaleString()} Securely</>}
+                    <button
+                      disabled={loading || verifying}
+                      onClick={handlePaystack}
+                      className="flex-grow bg-stone-900 text-white py-5 rounded-3xl font-bold flex items-center justify-center gap-3 hover:bg-orange-500 transition-all shadow-xl disabled:bg-stone-300 disabled:cursor-not-allowed"
+                    >
+                      {loading
+                        ? <><Loader2 className="animate-spin" size={20}/> Opening...</>
+                        : verifying
+                        ? <><Loader2 className="animate-spin" size={20}/> Verifying...</>
+                        : <><Lock size={17}/> Pay GH₵ {finalTotal.toLocaleString()} Securely</>
+                      }
                     </button>
                   </div>
                 </div>
