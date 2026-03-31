@@ -27,7 +27,7 @@ function loadPaystack(): Promise<void> {
 }
 
 export default function CheckoutPage() {
-  const { cart, promotions, products: liveProducts } = useAppContext();
+  const { cart, promotions, products: liveProducts, clearCart } = useAppContext();
   const router = useRouter();
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [loading, setLoading] = useState(false);
@@ -154,13 +154,21 @@ export default function CheckoutPage() {
             const oid = await saveOrder(transaction.reference, OrderStatus.PENDING_VERIFICATION);
             setOrderId(oid);
             buildWhatsapp(oid);
+            clearCart(); // Clear cart after successful order
             setStep(3);
           } catch (err) {
             setPayError(`Payment received (ref: ${transaction.reference}) but order save failed. Contact support.`);
           }
           setLoading(false);
         },
-        onCancel: () => { setLoading(false); },
+        onCancel: () => { 
+          setLoading(false);
+          setVerifying(false);
+        },
+        onClose: () => {
+          setLoading(false);
+          setVerifying(false);
+        },
       }).openIframe();
     } catch (err) {
       setPayError('Failed to open payment. Please refresh and try again.');
@@ -175,6 +183,7 @@ export default function CheckoutPage() {
       const oid = await saveOrder(form.momoId, OrderStatus.PENDING_VERIFICATION);
       setOrderId(oid);
       buildWhatsapp(oid);
+      clearCart(); // Clear cart after successful order
       setStep(3);
       setTimeout(() => { if (whatsappUrl) window.location.href = whatsappUrl; }, 1800);
     } catch (err) {

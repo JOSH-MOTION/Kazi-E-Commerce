@@ -164,13 +164,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       try {
         const product = products.find(p => p.id === item.productId);
         if (!product) {
-          console.warn('Product not found in cart:', item.productId);
           return sum;
         }
         
         const variant = product.variants?.find(v => v.id === item.variantId);
         if (!variant) {
-          console.warn('Variant not found in cart:', item.variantId);
           return sum;
         }
         

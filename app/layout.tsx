@@ -6,6 +6,7 @@ import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import CartDrawer from '../components/CartDrawer';
 import Script from 'next/script';
+import GlobalComponents from '../components/GlobalComponents';
 
 
 export const metadata: Metadata = {
@@ -183,6 +184,7 @@ export default function RootLayout({
             </main>
             <Footer />
             <CartDrawer />
+            <GlobalComponents />
           
           </div>
         </AppProvider>
