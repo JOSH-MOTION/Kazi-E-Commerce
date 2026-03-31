@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { ShoppingBag, Star, Clock, ShieldCheck, X, AlertTriangle, ChevronLeft, ChevronRight, Tag, CalendarClock, Zap, Ticket, Sparkle, Check, Loader2, Image as ImageIcon, Truck, CreditCard, RotateCcw, Headphones, Search, Heart, User, Menu } from 'lucide-react';
 import { Product, ProductVariant } from '../types';
@@ -31,7 +30,6 @@ const Storefront: React.FC<StorefrontProps> = ({ addToCart }) => {
         result = result.filter(p => p.categoryId === activeCategory);
       }
       
-      // Apply tab filtering when not searching
       if (activeTab === 'best' || activeTab === 'top') {
         result = result.filter(p => p.isFeatured);
       }
@@ -40,35 +38,17 @@ const Storefront: React.FC<StorefrontProps> = ({ addToCart }) => {
     return result;
   }, [products, activeCategory, searchQuery, categories, activeTab]);
 
+  // ✅ FIX: Show one card per product, NOT one card per colorway
   const displayItems = useMemo(() => {
-    const items: { product: Product, colorName: string, variants: ProductVariant[] }[] = [];
-    
-    filteredProducts.forEach(product => {
-      const colorGroups: Record<string, ProductVariant[]> = {};
-      product.variants.forEach(v => {
-        if (!colorGroups[v.colorName]) colorGroups[v.colorName] = [];
-        colorGroups[v.colorName].push(v);
-      });
-
-      Object.entries(colorGroups).forEach(([colorName, variants]) => {
-        items.push({
-          product,
-          colorName,
-          variants
-        });
-      });
-    });
-
-    return items;
+    return filteredProducts;
   }, [filteredProducts]);
 
   const tickerMessage = settings?.tickerText || "Cartly • Your Effortless Shop • Accra 2025";
 
   return (
     <div className="w-full bg-white">
-      {/* Hero Section - Immersive Background Style */}
+      {/* Hero Section */}
       <section className="relative h-[500px] md:h-[700px] bg-stone-900 overflow-hidden">
-        {/* Background Image */}
         <div className="absolute inset-0 z-0">
           <img 
             key={settings?.heroImage || 'default'}
@@ -76,7 +56,6 @@ const Storefront: React.FC<StorefrontProps> = ({ addToCart }) => {
             className="w-full h-full object-cover animate-in fade-in duration-1000"
             alt="Hero Background"
           />
-          {/* Dark Overlay for Readability */}
           <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/40 to-transparent z-10" />
         </div>
 
@@ -108,7 +87,6 @@ const Storefront: React.FC<StorefrontProps> = ({ addToCart }) => {
           </div>
         </div>
         
-        {/* Slider Dots - Decorative */}
         <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex gap-3 z-30">
           <div className="w-12 h-1 bg-orange-500 rounded-full shadow-sm" />
           <div className="w-12 h-1 bg-white/20 rounded-full shadow-sm" />
@@ -183,10 +161,11 @@ const Storefront: React.FC<StorefrontProps> = ({ addToCart }) => {
 
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-6">
           {displayItems.length > 0 ? (
-            displayItems.slice(0, 15).map((item, idx) => (
+            // ✅ One card per product — colors shown as swatches on the card
+            displayItems.slice(0, 15).map((product) => (
               <ProductCard 
-                key={`${item.product.id}-${item.colorName}-${idx}`} 
-                product={item.product} 
+                key={product.id}
+                product={product} 
                 addToCart={addToCart}
               />
             ))
@@ -210,7 +189,6 @@ const Storefront: React.FC<StorefrontProps> = ({ addToCart }) => {
 
       {/* Promo Banners Grid */}
       <section className="max-w-[1400px] mx-auto py-12 px-6 grid grid-cols-1 md:grid-cols-4 gap-6">
-        {/* Promo 1 - Large */}
         <div className="md:col-span-2 md:row-span-2 relative h-[400px] md:h-auto bg-stone-900 rounded-sm overflow-hidden group">
           <img src={settings?.promo1Image || "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&q=80&w=800"} className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 opacity-80" alt="Promo 1" />
           <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-transparent" />
@@ -225,10 +203,6 @@ const Storefront: React.FC<StorefrontProps> = ({ addToCart }) => {
                 if (settings?.promo1Link) {
                   const cat = categories.find(c => c.id === settings.promo1Link);
                   if (cat) setActiveCategory(cat.id);
-                  else {
-                    const prod = products.find(p => p.id === settings.promo1Link);
-                    if (prod) setSelectedProduct(prod);
-                  }
                 } else {
                   const womenCat = categories.find(c => c.name.toLowerCase().includes('women'))?.id;
                   if (womenCat) setActiveCategory(womenCat);
@@ -242,7 +216,6 @@ const Storefront: React.FC<StorefrontProps> = ({ addToCart }) => {
           </div>
         </div>
 
-        {/* Promo 2 - Wide */}
         <div className="md:col-span-2 relative h-[250px] bg-stone-900 rounded-sm overflow-hidden group">
           <img src={settings?.promo2Image || "https://images.unsplash.com/photo-1488161628813-244768e7f63e?auto=format&fit=crop&q=80&w=800"} className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 opacity-80" alt="Promo 2" />
           <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-transparent" />
@@ -252,17 +225,6 @@ const Storefront: React.FC<StorefrontProps> = ({ addToCart }) => {
             <p className="text-white/80 mb-4 text-xs font-medium">{settings?.promo2Subtitle || "Flat 50% Off"}</p>
             <button 
               onClick={() => {
-                if (settings?.promo2Link) {
-                  const cat = categories.find(c => c.id === settings.promo2Link);
-                  if (cat) setActiveCategory(cat.id);
-                  else {
-                    const prod = products.find(p => p.id === settings.promo2Link);
-                    if (prod) setSelectedProduct(prod);
-                  }
-                } else {
-                  const menCat = categories.find(c => c.name.toLowerCase().includes('men'))?.id;
-                  if (menCat) setActiveCategory(menCat);
-                }
                 document.getElementById('collection-anchor')?.scrollIntoView({ behavior: 'smooth' });
               }}
               className="text-white font-bold text-[10px] uppercase tracking-widest flex items-center gap-1 hover:gap-2 transition-all border-b border-white pb-1"
@@ -272,51 +234,23 @@ const Storefront: React.FC<StorefrontProps> = ({ addToCart }) => {
           </div>
         </div>
 
-        {/* Promo 3 */}
         <div className="relative h-[250px] bg-stone-100 rounded-sm overflow-hidden group">
           <img src={settings?.promo3Image || "https://images.unsplash.com/photo-1584917865442-de89df76afd3?auto=format&fit=crop&q=80&w=600"} className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" alt="Promo 3" />
           <div className="absolute top-4 left-4 bg-orange-500 text-white text-[8px] font-bold px-2 py-1 rounded-sm uppercase">{settings?.promo3Badge || "25% Off"}</div>
           <div className="absolute bottom-6 left-6 bg-white/80 backdrop-blur-sm p-4 rounded-sm border border-stone-100">
             <h3 className="text-lg font-bold text-stone-900 mb-1">{settings?.promo3Title || "Handbag"}</h3>
-            <button 
-              onClick={() => {
-                if (settings?.promo3Link) {
-                  const cat = categories.find(c => c.id === settings.promo3Link);
-                  if (cat) setActiveCategory(cat.id);
-                  else {
-                    const prod = products.find(p => p.id === settings.promo3Link);
-                    if (prod) setSelectedProduct(prod);
-                  }
-                }
-                document.getElementById('collection-anchor')?.scrollIntoView({ behavior: 'smooth' });
-              }}
-              className="text-orange-500 font-bold text-[9px] uppercase tracking-widest flex items-center gap-1 hover:gap-2 transition-all"
-            >
+            <button onClick={() => document.getElementById('collection-anchor')?.scrollIntoView({ behavior: 'smooth' })} className="text-orange-500 font-bold text-[9px] uppercase tracking-widest flex items-center gap-1 hover:gap-2 transition-all">
               {settings?.promo3Subtitle || "Shop Now"} <ChevronRight size={10} />
             </button>
           </div>
         </div>
 
-        {/* Promo 4 */}
         <div className="relative h-[250px] bg-stone-100 rounded-sm overflow-hidden group">
           <img src={settings?.promo4Image || "https://images.unsplash.com/photo-1524592094714-0f0654e20314?auto=format&fit=crop&q=80&w=600"} className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" alt="Promo 4" />
           <div className="absolute top-4 left-4 bg-orange-500 text-white text-[8px] font-bold px-2 py-1 rounded-sm uppercase">{settings?.promo4Badge || "45% Off"}</div>
           <div className="absolute bottom-6 left-6 bg-white/80 backdrop-blur-sm p-4 rounded-sm border border-stone-100">
             <h3 className="text-lg font-bold text-stone-900 mb-1">{settings?.promo4Title || "Watch"}</h3>
-            <button 
-              onClick={() => {
-                if (settings?.promo4Link) {
-                  const cat = categories.find(c => c.id === settings.promo4Link);
-                  if (cat) setActiveCategory(cat.id);
-                  else {
-                    const prod = products.find(p => p.id === settings.promo4Link);
-                    if (prod) setSelectedProduct(prod);
-                  }
-                }
-                document.getElementById('collection-anchor')?.scrollIntoView({ behavior: 'smooth' });
-              }}
-              className="text-orange-500 font-bold text-[9px] uppercase tracking-widest flex items-center gap-1 hover:gap-2 transition-all"
-            >
+            <button onClick={() => document.getElementById('collection-anchor')?.scrollIntoView({ behavior: 'smooth' })} className="text-orange-500 font-bold text-[9px] uppercase tracking-widest flex items-center gap-1 hover:gap-2 transition-all">
               {settings?.promo4Subtitle || "Shop Now"} <ChevronRight size={10} />
             </button>
           </div>
@@ -332,14 +266,7 @@ const Storefront: React.FC<StorefrontProps> = ({ addToCart }) => {
             <span className="text-orange-500 font-bold text-[10px] uppercase tracking-widest mb-2 block">Weekend Sale</span>
             <h3 className="text-4xl font-black text-white mb-2 uppercase tracking-tighter">{settings?.banner1Title || "Men's Fashion"}</h3>
             <p className="text-white/80 font-bold mb-6 uppercase text-[10px] tracking-widest">{settings?.banner1Subtitle || "Flat 70% Off"}</p>
-            <button 
-              onClick={() => {
-                const menCat = categories.find(c => c.name.toLowerCase().includes('men'))?.id;
-                if (menCat) setActiveCategory(menCat);
-                document.getElementById('collection-anchor')?.scrollIntoView({ behavior: 'smooth' });
-              }}
-              className="bg-white text-stone-900 px-10 py-3 rounded-sm font-bold text-[10px] uppercase tracking-widest hover:bg-orange-500 hover:text-white transition-all"
-            >
+            <button onClick={() => document.getElementById('collection-anchor')?.scrollIntoView({ behavior: 'smooth' })} className="bg-white text-stone-900 px-10 py-3 rounded-sm font-bold text-[10px] uppercase tracking-widest hover:bg-orange-500 hover:text-white transition-all">
               Shop Now
             </button>
           </div>
@@ -351,14 +278,7 @@ const Storefront: React.FC<StorefrontProps> = ({ addToCart }) => {
             <span className="text-orange-500 font-bold text-[10px] uppercase tracking-widest mb-2 block">Fashion Style</span>
             <h3 className="text-4xl font-black text-white mb-2 uppercase tracking-tighter">{settings?.banner2Title || "Women's Wear"}</h3>
             <p className="text-white/80 font-bold mb-6 uppercase text-[10px] tracking-widest">{settings?.banner2Subtitle || "Min. 35-70% Off"}</p>
-            <button 
-              onClick={() => {
-                const womenCat = categories.find(c => c.name.toLowerCase().includes('women'))?.id;
-                if (womenCat) setActiveCategory(womenCat);
-                document.getElementById('collection-anchor')?.scrollIntoView({ behavior: 'smooth' });
-              }}
-              className="bg-white text-stone-900 px-10 py-3 rounded-sm font-bold text-[10px] uppercase tracking-widest hover:bg-orange-500 hover:text-white transition-all"
-            >
+            <button onClick={() => document.getElementById('collection-anchor')?.scrollIntoView({ behavior: 'smooth' })} className="bg-white text-stone-900 px-10 py-3 rounded-sm font-bold text-[10px] uppercase tracking-widest hover:bg-orange-500 hover:text-white transition-all">
               Shop Now
             </button>
           </div>
@@ -404,25 +324,18 @@ const Storefront: React.FC<StorefrontProps> = ({ addToCart }) => {
 const ProductModal = ({ product, onClose, addToCart }: any) => {
   const { categories } = useAppContext();
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant>(() => {
-    const initialColor = (product as any).initialColor;
-    if (initialColor) {
-      return product.variants.find((v: any) => v.colorName === initialColor && (v.stock > 0 || v.leadTime) && !v.isComingSoon) || 
-             product.variants.find((v: any) => v.colorName === initialColor) ||
-             product.variants[0];
-    }
     return product.variants?.find((v:any) => (v.stock > 0 || v.leadTime) && !v.isComingSoon) || product.variants?.[0];
   });
   const [activeImageIdx, setActiveImageIdx] = useState(0);
 
-  // Combine product images with color-specific images, removing duplicates
   const allImages = useMemo(() => {
     const colorImages = selectedVariant?.images || [];
     const productImages = product.images || [];
-    // Prioritize color images, then add product images, filtering out duplicates
     const combined = [...colorImages, ...productImages];
     return Array.from(new Set(combined)).filter(Boolean);
   }, [product.images, selectedVariant]);
 
+  // Unique colors
   const colors = Array.from(new Set(product.variants?.map((v: any) => v.colorName) || [])).map(name => 
     product.variants?.find((v: any) => v.colorName === name)!
   );
@@ -431,28 +344,16 @@ const ProductModal = ({ product, onClose, addToCart }: any) => {
   const isPreOrder = selectedVariant?.stock === 0 && !!selectedVariant?.leadTime && !selectedVariant?.isComingSoon;
   const canPurchase = isInStock || isPreOrder;
 
-  const nextImage = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setActiveImageIdx((prev) => (prev + 1) % allImages.length);
-  };
-  const prevImage = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setActiveImageIdx((prev) => (prev - 1 + allImages.length) % allImages.length);
-  };
+  const nextImage = (e: React.MouseEvent) => { e.stopPropagation(); setActiveImageIdx((prev) => (prev + 1) % allImages.length); };
+  const prevImage = (e: React.MouseEvent) => { e.stopPropagation(); setActiveImageIdx((prev) => (prev - 1 + allImages.length) % allImages.length); };
 
-  // Reset image index when variant (color) changes
-  useEffect(() => {
-    setActiveImageIdx(0);
-  }, [selectedVariant?.colorName]);
+  useEffect(() => { setActiveImageIdx(0); }, [selectedVariant?.colorName]);
 
   const [isAdding, setIsAdding] = useState(false);
   const handleAddToCart = () => {
     setIsAdding(true);
     addToCart(product.id, selectedVariant.id, 1);
-    setTimeout(() => {
-      setIsAdding(false);
-      onClose();
-    }, 500);
+    setTimeout(() => { setIsAdding(false); onClose(); }, 500);
   };
 
   return (
@@ -461,41 +362,23 @@ const ProductModal = ({ product, onClose, addToCart }: any) => {
       <div className="relative w-full max-w-3xl bg-white sm:rounded-xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom duration-300 mx-auto sm:my-8">
         <button onClick={onClose} className="absolute top-3 right-3 z-40 bg-white/70 backdrop-blur-lg p-2 rounded-full text-stone-900 shadow-sm hover:bg-white transition-all"><X size={16} /></button>
         <div className="flex flex-col lg:flex-row max-h-[85vh] lg:max-h-[75vh] overflow-y-auto">
-          {/* Gallery Section */}
+          {/* Gallery */}
           <div className="w-full lg:w-1/2 relative bg-stone-50 overflow-hidden group/gallery">
             <div className="aspect-[1/1] sm:aspect-[4/5] w-full max-h-[40vh] md:max-h-none overflow-hidden flex items-center justify-center bg-stone-50">
-              <img 
-                src={optimizeImage(allImages[activeImageIdx], 800)} 
-                className="w-full h-full object-contain transition-all duration-500" 
-                alt={product.name} 
-              />
+              <img src={optimizeImage(allImages[activeImageIdx], 800)} className="w-full h-full object-contain transition-all duration-500" alt={product.name} />
             </div>
-            
             {allImages.length > 1 && (
               <>
-                {/* Navigation Arrows */}
-                <button 
-                  onClick={prevImage}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/80 backdrop-blur border border-stone-100 flex items-center justify-center text-stone-900 shadow-md z-30 hover:bg-white transition-all"
-                >
+                <button onClick={prevImage} className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/80 backdrop-blur border border-stone-100 flex items-center justify-center text-stone-900 shadow-md z-30 hover:bg-white transition-all">
                   <ChevronLeft size={18} />
                 </button>
-                <button 
-                  onClick={nextImage}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/80 backdrop-blur border border-stone-100 flex items-center justify-center text-stone-900 shadow-md z-30 hover:bg-white transition-all"
-                >
+                <button onClick={nextImage} className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/80 backdrop-blur border border-stone-100 flex items-center justify-center text-stone-900 shadow-md z-30 hover:bg-white transition-all">
                   <ChevronRight size={18} />
                 </button>
-
-                {/* Thumbnail Strip */}
                 <div className="absolute bottom-4 left-0 right-0 px-4 z-20">
                   <div className="flex justify-center gap-2 overflow-x-auto py-2 no-scrollbar">
                     {allImages.map((img: any, i: number) => (
-                      <button 
-                        key={i} 
-                        onClick={(e) => { e.stopPropagation(); setActiveImageIdx(i); }} 
-                        className={`relative w-10 h-12 rounded-md overflow-hidden border-2 transition-all shrink-0 ${i === activeImageIdx ? 'border-stone-900 scale-110 shadow-md' : 'border-transparent opacity-50 hover:opacity-100'}`}
-                      >
+                      <button key={i} onClick={(e) => { e.stopPropagation(); setActiveImageIdx(i); }} className={`relative w-10 h-12 rounded-md overflow-hidden border-2 transition-all shrink-0 ${i === activeImageIdx ? 'border-stone-900 scale-110 shadow-md' : 'border-transparent opacity-50 hover:opacity-100'}`}>
                         <img src={optimizeImage(img, 100)} className="w-full h-full object-cover" alt="" />
                       </button>
                     ))}
@@ -505,7 +388,7 @@ const ProductModal = ({ product, onClose, addToCart }: any) => {
             )}
           </div>
 
-          {/* Details Section */}
+          {/* Details */}
           <div className="w-full lg:w-1/2 p-6 md:p-8 flex flex-col bg-white">
             <span className="text-[7px] font-bold uppercase tracking-widest text-stone-400 mb-1">{categories.find(c => c.id === product.categoryId)?.name}</span>
             <h2 className="text-xl md:text-2xl font-serif font-bold text-stone-900 mb-2 uppercase tracking-tight">{product.name}</h2>
@@ -516,25 +399,63 @@ const ProductModal = ({ product, onClose, addToCart }: any) => {
             <p className="text-stone-500 text-[11px] leading-relaxed mb-6 font-medium tracking-wide">{product.description}</p>
             
             <div className="space-y-6 mb-8">
+              {/* Color Selector — rich UI */}
               {colors.length > 1 && (
                 <div>
-                  <label className="text-[7px] font-bold uppercase text-stone-400 block mb-2 tracking-widest">
-                    {selectedVariant?.colorName && selectedVariant.colorName !== 'Standard' ? `Colorway: ${selectedVariant.colorName}` : 'Select Color'}
-                  </label>
-                  <div className="flex flex-wrap gap-2.5">
-                    {colors.map((c: any) => (
-                      <button 
-                        key={c.id} 
-                        onClick={() => setSelectedVariant(product.variants.find((v:any) => v.colorName === c.colorName)!)} 
-                        className={`w-7 h-7 rounded-full border transition-all p-0.5 ${selectedVariant?.colorName === c.colorName ? 'border-stone-900 ring-2 ring-stone-900/10' : 'border-transparent opacity-60 hover:opacity-100'}`}
-                      >
-                        <div className="w-full h-full rounded-full shadow-inner" style={{ backgroundColor: c.hexColor || '#1a1a1a' }} />
-                      </button>
-                    ))}
+                  <div className="flex items-center justify-between mb-3">
+                    <label className="text-[8px] font-bold uppercase text-stone-400 tracking-widest">
+                      Color: <span className="text-stone-900">{selectedVariant?.colorName}</span>
+                    </label>
+                    <span className="text-[7px] text-stone-300 font-bold uppercase">{colors.length} colorways</span>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {colors.map((c: any) => {
+                      const isSelected = selectedVariant?.colorName === c.colorName;
+                      const colorImage = c.images?.[0];
+                      return (
+                        <button
+                          key={c.id}
+                          onClick={() => setSelectedVariant(product.variants.find((v:any) => v.colorName === c.colorName)!)}
+                          title={c.colorName}
+                          className={`relative group/color transition-all duration-200 ${isSelected ? 'scale-110' : 'hover:scale-105'}`}
+                        >
+                          {colorImage ? (
+                            /* Image swatch — if the color has a photo */
+                            <div className={`w-10 h-10 rounded-lg overflow-hidden border-2 transition-all ${isSelected ? 'border-stone-900 shadow-lg ring-2 ring-stone-900/20' : 'border-stone-200 hover:border-stone-400'}`}>
+                              <img src={optimizeImage(colorImage, 80)} className="w-full h-full object-cover" alt={c.colorName} />
+                            </div>
+                          ) : (
+                            /* Color dot swatch */
+                            <div className={`w-10 h-10 rounded-lg border-2 transition-all flex items-center justify-center ${isSelected ? 'border-stone-900 shadow-lg ring-2 ring-stone-900/20' : 'border-stone-200 hover:border-stone-400'}`}
+                              style={{ backgroundColor: c.hexColor || '#1a1a1a' }}
+                            >
+                              {isSelected && <Check size={14} className="text-white drop-shadow" />}
+                            </div>
+                          )}
+                          {/* Tooltip */}
+                          <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[7px] font-bold uppercase tracking-widest text-stone-500 whitespace-nowrap opacity-0 group-hover/color:opacity-100 transition-opacity pointer-events-none">
+                            {c.colorName}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {/* Selected color label strip */}
+                  <div className="mt-6 flex items-center gap-2 p-2 bg-stone-50 rounded-lg border border-stone-100">
+                    <div className="w-5 h-5 rounded-md border border-stone-200" style={{ backgroundColor: selectedVariant?.hexColor || '#1a1a1a' }} />
+                    <span className="text-[9px] font-bold uppercase tracking-widest text-stone-600">{selectedVariant?.colorName}</span>
+                    {selectedVariant?.stock > 0 ? (
+                      <span className="ml-auto text-[7px] font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded-full">{selectedVariant.stock} in stock</span>
+                    ) : selectedVariant?.leadTime ? (
+                      <span className="ml-auto text-[7px] font-bold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full">Ships in {selectedVariant.leadTime}</span>
+                    ) : (
+                      <span className="ml-auto text-[7px] font-bold text-stone-400 bg-stone-100 px-2 py-0.5 rounded-full">Out of stock</span>
+                    )}
                   </div>
                 </div>
               )}
 
+              {/* Size Selector */}
               {sizesForColor.some((s: any) => s.size && s.size !== 'No Size') && (
                 <div>
                   <div className="flex justify-between items-center mb-2">
@@ -579,24 +500,11 @@ const ProductModal = ({ product, onClose, addToCart }: any) => {
                 {isAdding ? (
                   <Loader2 className="animate-spin" size={16} />
                 ) : canPurchase ? (
-                  <>
-                    <ShoppingBag size={16} />
-                    <span className="text-[11px] uppercase tracking-[0.15em]">Add to Collection</span>
-                  </>
+                  <><ShoppingBag size={16} /><span className="text-[11px] uppercase tracking-[0.15em]">Add to Collection</span></>
                 ) : (
-                  <>
-                    <AlertTriangle size={16} />
-                    <span className="text-[11px] uppercase tracking-[0.15em]">
-                      {selectedVariant?.isComingSoon ? 'Coming Soon' : 'Out of Stock'}
-                    </span>
-                  </>
+                  <><AlertTriangle size={16} /><span className="text-[11px] uppercase tracking-[0.15em]">{selectedVariant?.isComingSoon ? 'Coming Soon' : 'Out of Stock'}</span></>
                 )}
               </button>
-              {!canPurchase && !selectedVariant?.isComingSoon && (
-                <p className="text-[7px] text-center text-stone-400 mt-2 uppercase font-bold tracking-widest">
-                  This size is currently unavailable. Check back soon.
-                </p>
-              )}
             </div>
           </div>
         </div>

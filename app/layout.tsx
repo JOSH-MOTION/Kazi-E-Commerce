@@ -5,7 +5,8 @@ import { AppProvider } from '../context/AppContext';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import CartDrawer from '../components/CartDrawer';
-import GlobalComponents from '../components/GlobalComponents';
+import Script from 'next/script';
+
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.cartlygh.com"),
@@ -107,65 +108,72 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <head>
-        {/* Google Analytics */}
-        <script async src="https://www.googletagmanager.com/gtag/js?id=G-1FLN96BM0J"/>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              window.dataLayer = window.dataLayer || [];
-              function gtag(){dataLayer.push(arguments);}
-              gtag('js', new Date());
-              gtag('config', 'G-1FLN96BM0J');
-            `,
-          }}
-        />
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify({
-              "@context": "https://schema.org",
-              "@type": "OnlineStore",
-              name: "Cartly GH",
-              description:
-                "Your premier online destination for fashion, premium apparel, and lifestyle essentials in Accra, Ghana.",
-              url: "https://www.cartlygh.com",
-              logo: "https://www.cartlygh.com/catly.png",
-              image: "https://www.cartlygh.com/og-image.jpg",
-              telephone: "+233242403450",
-              email: "support@cartlygh.com",
-              address: {
-                "@type": "PostalAddress",
-                streetAddress: "Accra",
-                addressLocality: "Accra",
-                addressCountry: "GH",
-              },
-              geo: {
-                "@type": "GeoCoordinates",
-                latitude: 5.6037,
-                longitude: -0.1870,
-              },
-              openingHoursSpecification: {
-                "@type": "OpeningHoursSpecification",
-                dayOfWeek: [
-                  "Monday","Tuesday","Wednesday",
-                  "Thursday","Friday","Saturday","Sunday",
-                ],
-                opens: "00:00",
-                closes: "23:59",
-              },
-              sameAs: [
-                "https://www.instagram.com/cartly_gh",
-                "https://twitter.com/cartly_gh",
-              ],
-              priceRange: "GH₵₵₵",
-              currenciesAccepted: "GHS",
-              paymentAccepted: "Mobile Money, Cash",
-              areaServed: "Ghana",
-            }),
-          }}
-        />
-      </head>
+      {/* Google Analytics */}
+<Script
+  id="google-analytics"
+  strategy="afterInteractive"
+  src="https://www.googletagmanager.com/gtag/js?id=G-1FLN96BM0J"
+/>
+
+<Script
+  id="google-analytics-init"
+  strategy="afterInteractive"
+  dangerouslySetInnerHTML={{
+    __html: `
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-1FLN96BM0J');
+    `,
+  }}
+/>
+
+<Script
+  id="structured-data"
+  type="application/ld+json"
+  dangerouslySetInnerHTML={{
+    __html: JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "OnlineStore",
+      name: "Cartly GH",
+      description:
+        "Your premier online destination for fashion, premium apparel, and lifestyle essentials in Accra, Ghana.",
+      url: "https://www.cartlygh.com",
+      logo: "https://www.cartlygh.com/catly.png",
+      image: "https://www.cartlygh.com/og-image.jpg",
+      telephone: "+233242403450",
+      email: "support@cartlygh.com",
+      address: {
+        "@type": "PostalAddress",
+        streetAddress: "Accra",
+        addressLocality: "Accra",
+        addressCountry: "GH",
+      },
+      geo: {
+        "@type": "GeoCoordinates",
+        latitude: 5.6037,
+        longitude: -0.1870,
+      },
+      openingHoursSpecification: {
+        "@type": "OpeningHoursSpecification",
+        dayOfWeek: [
+          "Monday","Tuesday","Wednesday",
+          "Thursday","Friday","Saturday","Sunday",
+        ],
+        opens: "00:00",
+        closes: "23:59",
+      },
+      sameAs: [
+        "https://www.instagram.com/cartly_gh",
+        "https://twitter.com/cartly_gh",
+      ],
+      priceRange: "GH₵₵₵",
+      currenciesAccepted: "GHS",
+      paymentAccepted: "Mobile Money, Cash",
+      areaServed: "Ghana",
+    }),
+  }}
+/>
       <body className="antialiased font-sans bg-[#fcfcf9] text-stone-900" suppressHydrationWarning>
         <AppProvider>
           <div className="min-h-screen flex flex-col">
@@ -175,7 +183,7 @@ export default function RootLayout({
             </main>
             <Footer />
             <CartDrawer />
-            <GlobalComponents />
+          
           </div>
         </AppProvider>
       </body>

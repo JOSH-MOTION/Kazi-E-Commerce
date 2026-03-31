@@ -1,25 +1,25 @@
-
-import { initializeApp } from 'firebase/app';
+import { initializeApp, getApps } from 'firebase/app';
 import { getFirestore, collection } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 
-// Configuration provided by the user
 const firebaseConfig = {
-  apiKey: "AIzaSyAEK4hIsbv7DAKNTimii1R1z0C3LWMYYXY",
-  authDomain: "studio-572308010-90c24.firebaseapp.com",
-  projectId: "studio-572308010-90c24",
-  storageBucket: "studio-572308010-90c24.firebasestorage.app",
-  messagingSenderId: "875954381628",
-  appId: "1:875954381628:web:b1974abdd0b8b1e9543439"
+  apiKey:            process.env.NEXT_PUBLIC_FIREBASE_API_KEY!,
+  authDomain:        process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN!,
+  projectId:         process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID!,
+  storageBucket:     process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET!,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID!,
+  appId:             process.env.NEXT_PUBLIC_FIREBASE_APP_ID!,
 };
 
-const app = initializeApp(firebaseConfig);
-export const db = getFirestore(app);
+// Prevent re-initializing on hot reload in Next.js dev mode
+const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
+
+export const db   = getFirestore(app);
 export const auth = getAuth(app);
 
-// Collection References
-export const ORDERS_REF = collection(db, 'orders');
-export const USERS_REF = collection(db, 'users');
-export const PRODUCTS_REF = collection(db, 'products');
+// Collection references
+export const ORDERS_REF    = collection(db, 'orders');
+export const USERS_REF     = collection(db, 'users');
+export const PRODUCTS_REF  = collection(db, 'products');
 export const INVENTORY_REF = collection(db, 'inventory');
-export const EXPENSES_REF = collection(db, 'expenses');
+export const EXPENSES_REF  = collection(db, 'expenses');

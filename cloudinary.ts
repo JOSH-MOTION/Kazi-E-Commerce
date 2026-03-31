@@ -1,11 +1,6 @@
-/**
- * Cloudinary integration for KAZI retail platform.
- * Uses unsigned uploads with an upload preset for browser-side image handling.
- */
-
 export const CLOUDINARY_CONFIG = {
-  cloudName: 'dlng6dqtl',
-  uploadPreset: 'eccomerce',
+  cloudName:    process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME!,
+  uploadPreset: process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET!,
 };
 
 /**
