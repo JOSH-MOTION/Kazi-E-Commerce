@@ -103,7 +103,6 @@ export default function CheckoutPage() {
   };
 
   const verifyWithServer = async (reference: string): Promise<boolean> => {
-    setVerifying(true);
     try {
       const res  = await fetch('/api/verify-payment', {
         method: 'POST',
@@ -115,8 +114,6 @@ export default function CheckoutPage() {
     } catch (err) {
       console.error('Verify error:', err);
       return false;
-    } finally {
-      setVerifying(false);
     }
   };
 
@@ -149,17 +146,24 @@ export default function CheckoutPage() {
         },
         channels: ['card', 'mobile_money', 'bank', 'ussd'],
         onSuccess: async (transaction: any) => {
+          console.log('Paystack success:', transaction);
           try {
+            setVerifying(true);
             await verifyWithServer(transaction.reference);
+            console.log('Payment verified successfully');
             const oid = await saveOrder(transaction.reference, OrderStatus.PENDING_VERIFICATION);
-            buildWhatsapp(oid);
+            console.log('Order saved:', oid);
             setOrderId(oid);
+            buildWhatsapp(oid);
             clearCart();
+            console.log('About to set step 3');
             // Clear loading BEFORE setting step so button doesn't flash
             setLoading(false);
             setVerifying(false);
             setStep(3);
+            console.log('Step set to 3');
           } catch (err) {
+            console.error('Error in payment success:', err);
             setLoading(false);
             setVerifying(false);
             setPayError(`Payment received (ref: ${transaction.reference}) but order save failed. Contact support.`);
