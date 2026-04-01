@@ -940,6 +940,10 @@ const OrdersTable = ({ orders, updateStatus }: { orders: Order[], updateStatus: 
   const [deliveryFeeModal, setDeliveryFeeModal] = useState<{order: Order, fee: string} | null>(null);
 
   const sendWhatsAppConfirmation = (order: Order, fee: number) => {
+    console.log('🚀 Sending WhatsApp confirmation for order:', order.id);
+    console.log('💰 Delivery fee:', fee);
+    console.log('👤 Customer phone:', order.customerPhone);
+    
     const totalWithDelivery = order.totalAmount + fee;
     const message = `Thank you for your order 🙏🏾
 
@@ -951,6 +955,10 @@ Please confirm so we dispatch immediately.`;
 
     const encodedMessage = encodeURIComponent(message);
     const whatsappUrl = `https://wa.me/${order.customerPhone.startsWith('0') ? '233' + order.customerPhone.substring(1) : order.customerPhone}?text=${encodedMessage}`;
+    
+    console.log('📱 Opening WhatsApp URL:', whatsappUrl);
+    console.log('🔄 Redirecting customer to WhatsApp...');
+    
     window.open(whatsappUrl, '_blank');
     setDeliveryFeeModal(null);
   };

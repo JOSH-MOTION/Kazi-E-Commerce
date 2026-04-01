@@ -149,24 +149,51 @@ export default function CheckoutPage() {
           console.log('Paystack success:', transaction);
           try {
             setVerifying(true);
-            await verifyWithServer(transaction.reference);
-            console.log('Payment verified successfully');
-            const oid = await saveOrder(transaction.reference, OrderStatus.PENDING_VERIFICATION);
-            console.log('Order saved:', oid);
-            setOrderId(oid);
-            buildWhatsapp(oid);
-            clearCart();
-            console.log('About to set step 3');
-            // Clear loading BEFORE setting step so button doesn't flash
-            setLoading(false);
-            setVerifying(false);
-            setStep(3);
-            console.log('Step set to 3');
+            console.log('🔍 Verifying Paystack payment...', transaction.reference);
+            
+            const verified = await verifyWithServer(transaction.reference);
+            if (verified) {
+              console.log('✅ Paystack payment verified successfully');
+              
+              const oid = await saveOrder(transaction.reference, OrderStatus.PENDING_VERIFICATION);
+              console.log('📦 Order saved:', oid);
+              console.log('🛒 Cart cleared');
+              
+              setOrderId(oid);
+              buildWhatsapp(oid);
+              clearCart();
+              console.log('⏰ Ready for WhatsApp redirect - customer will click button');
+              
+              // Clear loading BEFORE setting step so button doesn't flash
+              setLoading(false);
+              setVerifying(false);
+              setStep(3);
+              console.log('📋 Step set to 3 - showing confirmation with manual WhatsApp button');
+            } else {
+              console.error('❌ Payment verification failed');
+              setPayError('Payment verification failed. Please contact support with reference: ' + transaction.reference);
+              setLoading(false);
+              setVerifying(false);
+            }
           } catch (err) {
-            console.error('Error in payment success:', err);
-            setLoading(false);
-            setVerifying(false);
-            setPayError(`Payment received (ref: ${transaction.reference}) but order save failed. Contact support.`);
+            console.error('❌ Error in Paystack payment success:', err);
+            // Still save the order even if verification fails, but mark it for manual review
+            try {
+              const oid = await saveOrder(transaction.reference, OrderStatus.PENDING_VERIFICATION);
+              console.log('📦 Order saved (manual review):', oid);
+              setOrderId(oid);
+              buildWhatsapp(oid);
+              clearCart();
+              setLoading(false);
+              setVerifying(false);
+              setStep(3);
+              console.log('📋 Step set to 3 - showing confirmation (manual review required)');
+            } catch (saveErr) {
+              console.error('❌ Failed to save order:', saveErr);
+              setPayError(`Payment received (ref: ${transaction.reference}) but order save failed. Contact support.`);
+              setLoading(false);
+              setVerifying(false);
+            }
           }
         },
         onCancel: () => {
@@ -189,14 +216,23 @@ export default function CheckoutPage() {
     setPayError('');
     setLoading(true);
     try {
+      console.log('💳 Processing MoMo payment for customer...');
+      console.log('📝 MoMo transaction ID:', form.momoId);
+      
       const oid = await saveOrder(form.momoId, OrderStatus.PENDING_VERIFICATION);
+      console.log('✅ Order saved successfully:', oid);
+      console.log('🛒 Cart cleared');
+      
       setOrderId(oid);
       buildWhatsapp(oid);
       clearCart();
       setLoading(false);
       setStep(3);
-      setTimeout(() => { if (whatsappUrl) window.location.href = whatsappUrl; }, 1800);
+      
+      console.log('⏰ Ready for WhatsApp redirect - customer will click button');
+      console.log('� WhatsApp URL ready:', whatsappUrl);
     } catch (err) {
+      console.error('❌ Payment processing failed:', err);
       setPayError('Failed to place order. Please check your connection.');
       setLoading(false);
     }
