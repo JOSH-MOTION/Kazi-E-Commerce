@@ -1498,13 +1498,13 @@ const ManualSalesManager = ({ manualSales }: { manualSales: ManualSale[] }) => {
                               }
                             }
                             
-                            await deleteDoc(doc(db, 'manualSales', sale.id);
+                            await deleteDoc(doc(db, 'manualSales', sale.id));
                             console.log('Deleted sale: ' + sale.itemName + ' (' + sale.quantity + ' units)');
                           } catch (err: any) {
                             alert(`Failed to delete entry: ${err.message}`);
                           }
                         }
-                      } 
+                      }} 
                       className="text-stone-200 hover:text-red-500 transition-all"
                     >
                       <Trash2 size={14} />
