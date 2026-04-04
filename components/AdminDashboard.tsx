@@ -1485,10 +1485,21 @@ const ManualSalesManager = ({ manualSales }: { manualSales: ManualSale[] }) => {
                       onClick={async () => {
                         if (confirm(`Remove entry for "${sale.itemName}"?`)) {
                           try {
-                            // If it was linked to inventory, we should probably restore stock? 
-                            // Current requirement doesn't specify, but it's good practice.
-                            // For now keep it simple.
-                            await deleteDoc(doc(db, 'manualSales', sale.id));
+                            // If it was linked to inventory, restore the stock
+                            if (sale.inventoryProductId) {
+                              const product = inventoryProducts.find(p => p.id === sale.inventoryProductId);
+                              if (product) {
+                                const newStock = product.remainingStock + sale.quantity;
+                                console.log(`🔄 Restoring ${sale.quantity} units to ${product.name}. New stock: ${newStock}`);
+                                
+                                await updateDoc(doc(db, 'inventory', product.id), {
+                                  remainingStock: newStock
+                                });
+                              }
+                            }
+                            
+                            await deleteDoc(doc(db, 'manualSales', sale.id);
+                            console.log(`🗑️ Deleted sale: ${sale.itemName} (${sale.quantity} units)`);
                           } catch (err: any) {
                             alert(`Failed to delete entry: ${err.message}`);
                           }
