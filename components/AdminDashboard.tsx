@@ -1403,7 +1403,7 @@ const InventoryTracker = ({ inventoryProducts, manualSales, expenses }: { invent
 };
 
 const ManualSalesManager = ({ manualSales }: { manualSales: ManualSale[] }) => {
-  const { products } = useAppContext();
+  const { products, inventoryProducts } = useAppContext();
   const [form, setForm] = useState({ itemName: '', quantity: 1, salePrice: 0, costPrice: 0, channel: 'WhatsApp' });
   const [saving, setSaving] = useState(false);
 
@@ -1495,6 +1495,19 @@ const ManualSalesManager = ({ manualSales }: { manualSales: ManualSale[] }) => {
                                 await updateDoc(doc(db, 'inventory', product.id), {
                                   remainingStock: newStock
                                 });
+                              }
+                            } else {
+                              // Fallback: Try to find product by name and restore stock
+                              const product = inventoryProducts.find(p => p.name.toLowerCase() === sale.itemName.toLowerCase());
+                              if (product) {
+                                const newStock = product.remainingStock + sale.quantity;
+                                console.log(`🔄 Fallback: Restoring ${sale.quantity} units to ${product.name}. New stock: ${newStock}`);
+                                
+                                await updateDoc(doc(db, 'inventory', product.id), {
+                                  remainingStock: newStock
+                                });
+                              } else {
+                                console.warn(`⚠️ Could not find inventory product for "${sale.itemName}" to restore stock`);
                               }
                             }
                             

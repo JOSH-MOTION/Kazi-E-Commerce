@@ -3,7 +3,7 @@ import React, { createContext, useContext, useState, useEffect, useMemo } from '
 import { auth, db } from '../firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { doc, collection, onSnapshot } from 'firebase/firestore';
-import { CartItem, Product, Category, Promotion, StoreSettings } from '../types';
+import { CartItem, Product, Category, Promotion, StoreSettings, InventoryProduct, Expense } from '../types';
 import { PRODUCTS as STATIC_PRODUCTS, CATEGORIES as STATIC_CATEGORIES, PROMOTIONS as STATIC_PROMOS } from '../constants';
 
 interface AppContextType {
@@ -13,6 +13,8 @@ interface AppContextType {
   categories: Category[];
   promotions: Promotion[];
   settings: StoreSettings | null;
+  inventoryProducts: InventoryProduct[];
+  expenses: Expense[];
   cart: CartItem[];
   cartTotal: number;
   totalItems: number;
@@ -40,6 +42,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [categories, setCategories] = useState<Category[]>([]);
   const [promotions, setPromotions] = useState<Promotion[]>([]);
   const [settings, setSettings] = useState<StoreSettings | null>(null);
+  const [inventoryProducts, setInventoryProducts] = useState<InventoryProduct[]>([]);
+  const [expenses, setExpenses] = useState<Expense[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [wishlist, setWishlist] = useState<string[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
@@ -97,6 +101,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     }, (err) => {
       console.error("Promotions listener error:", err);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    const unsubscribe = onSnapshot(collection(db, 'inventory'), (snapshot) => {
+      if (snapshot.empty) {
+        setInventoryProducts([]);
+      } else {
+        const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as InventoryProduct));
+        setInventoryProducts(data);
+      }
+    }, (err) => {
+      console.error("Inventory listener error:", err);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    const unsubscribe = onSnapshot(collection(db, 'expenses'), (snapshot) => {
+      if (snapshot.empty) {
+        setExpenses([]);
+      } else {
+        const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Expense));
+        setExpenses(data);
+      }
+    }, (err) => {
+      console.error("Expenses listener error:", err);
     });
     return () => unsubscribe();
   }, []);
@@ -237,6 +269,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   return (
     <AppContext.Provider value={{
       user, profile, products, categories, promotions, settings,
+      inventoryProducts, expenses,
       cart, cartTotal, totalItems, wishlist,
       isCartOpen, setIsCartOpen,
       isAuthOpen, setIsAuthOpen,
